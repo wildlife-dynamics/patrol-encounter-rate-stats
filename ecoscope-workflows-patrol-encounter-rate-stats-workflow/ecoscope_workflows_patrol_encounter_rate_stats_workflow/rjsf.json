@@ -1,0 +1,594 @@
+{
+  "properties": {
+    "workflow_details": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Workflow Name",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Workflow Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object",
+      "description": "Add information that will help to differentiate this workflow from another.",
+      "title": "Workflow Details"
+    },
+    "er_client_name": {
+      "additionalProperties": false,
+      "properties": {
+        "data_source": {
+          "$ref": "#/$defs/EarthRangerConnection",
+          "title": "",
+          "description": "Select one of your configured data sources."
+        }
+      },
+      "required": [
+        "data_source"
+      ],
+      "type": "object",
+      "title": "Data Source"
+    },
+    "time_range": {
+      "additionalProperties": false,
+      "properties": {
+        "since": {
+          "format": "date-time",
+          "title": "Since",
+          "type": "string",
+          "description": "The start time"
+        },
+        "until": {
+          "format": "date-time",
+          "title": "Until",
+          "type": "string",
+          "description": "The end time"
+        },
+        "timezone": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/TimezoneInfo"
+            }
+          ],
+          "default": null,
+          "title": "Timezone"
+        }
+      },
+      "required": [
+        "since",
+        "until"
+      ],
+      "type": "object",
+      "description": "Choose the period of time to analyze.",
+      "title": "Time Range"
+    },
+    "Patrol and Event Types": {
+      "type": "object",
+      "description": " ",
+      "ecoscope:task_group": true,
+      "properties": {
+        "er_params": {
+          "additionalProperties": false,
+          "properties": {
+            "patrol_types": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Patrol Types",
+              "type": "array",
+              "description": "Specify the patrol type(s) to analyze (optional). Leave empty to analyze all patrol types.",
+              "ecoscope:transform": [
+                {
+                  "transformer": "EarthRangerEnumResolver",
+                  "transformer_kws": {
+                    "type": "patrol_type",
+                    "depends_on": "properties.er_client_name.properties.data_source.properties.name"
+                  }
+                }
+              ]
+            },
+            "event_types": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Event Types",
+              "type": "array",
+              "description": "Specify the event type(s) to count (optional). Enter the \"Event Types\" value for each event type \u2014 one per field (e.g. \"wildlife_sighting_rep\"). Leave empty to count all patrol events.",
+              "default": []
+            },
+            "status": {
+              "default": [
+                "done"
+              ],
+              "items": {
+                "enum": [
+                  "active",
+                  "overdue",
+                  "done",
+                  "cancelled"
+                ],
+                "type": "string"
+              },
+              "title": "Patrol Status",
+              "type": "array",
+              "description": "Choose to analyze patrols with a certain status. If left empty, patrols of all status will be analyzed",
+              "uniqueItems": true,
+              "ecoscope:advanced": true
+            }
+          },
+          "required": [
+            "patrol_types",
+            "event_types"
+          ],
+          "type": "object",
+          "title": ""
+        }
+      }
+    },
+    "Filter Data": {
+      "type": "object",
+      "description": " ",
+      "ecoscope:task_group": true,
+      "properties": {
+        "patrol_filters": {
+          "additionalProperties": false,
+          "properties": {
+            "bounding_box": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/BoundingBox"
+                }
+              ],
+              "default": {
+                "min_y": -90.0,
+                "max_y": 90.0,
+                "min_x": -180.0,
+                "max_x": 180.0
+              },
+              "title": "Bounding Box",
+              "description": "Only include patrol observations and events whose coordinates fall inside this bounding box.",
+              "ecoscope:advanced": true
+            },
+            "filter_point_coords": {
+              "default": [
+                {
+                  "y": 90.0,
+                  "x": 180.0
+                },
+                {
+                  "y": 0.0,
+                  "x": 0.0
+                },
+                {
+                  "y": 1.0,
+                  "x": 1.0
+                }
+              ],
+              "items": {
+                "$ref": "#/$defs/Coordinate"
+              },
+              "title": "Filter Exact Point Coordinates",
+              "type": "array",
+              "description": "Exclude observations and events recorded at these exact coordinates (e.g. known bad GPS fixes).",
+              "ecoscope:advanced": true
+            },
+            "trajectory_segment_filter": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/TrajectorySegmentFilter"
+                }
+              ],
+              "default": {
+                "min_length_meters": 0.001,
+                "max_length_meters": 100000,
+                "min_time_secs": 1,
+                "max_time_secs": 172800,
+                "min_speed_kmhr": 0.01,
+                "max_speed_kmhr": 500
+              },
+              "title": "Trajectory Filter",
+              "description": "Drop trajectory segments outside these length / time / speed bounds (e.g. to remove implausible jumps).",
+              "ecoscope:advanced": true
+            }
+          },
+          "type": "object",
+          "required": [],
+          "title": ""
+        }
+      }
+    },
+    "Group Data": {
+      "type": "object",
+      "description": "Configure how results are grouped (by category, temporal index or spatial feature group) and split into per-group dashboard views.",
+      "ecoscope:task_group": true,
+      "properties": {
+        "groupers": {
+          "additionalProperties": false,
+          "properties": {
+            "groupers": {
+              "default": null,
+              "items": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/ValueGrouper"
+                  },
+                  {
+                    "$ref": "#/$defs/TemporalGrouper"
+                  },
+                  {
+                    "$ref": "#/$defs/SpatialGrouper"
+                  }
+                ],
+                "title": "Group by"
+              },
+              "title": " ",
+              "type": "array",
+              "description": "",
+              "ecoscope:transform": [
+                {
+                  "transformer": "EarthRangerEnumResolver",
+                  "transformer_kws": {
+                    "type": "spatial_feature_group",
+                    "depends_on": "properties.er_client_name.properties.data_source.properties.name"
+                  }
+                }
+              ]
+            }
+          },
+          "type": "object",
+          "required": [],
+          "title": ""
+        }
+      }
+    },
+    "Encounter Rate Summary": {
+      "type": "object",
+      "description": "Per-category encounter rate metrics. Choose the category to group rows by.",
+      "ecoscope:task_group": true,
+      "properties": {
+        "summary_groupby": {
+          "additionalProperties": false,
+          "properties": {
+            "vars": {
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  {
+                    "const": "patrol_subject",
+                    "title": "Patrol Subject"
+                  },
+                  {
+                    "const": "patrol_type",
+                    "title": "Patrol Type"
+                  },
+                  {
+                    "const": "patrol_serial_number",
+                    "title": "Patrol Serial Number"
+                  }
+                ]
+              },
+              "title": "Aggregator",
+              "type": "array",
+              "description": "Category to group summary rows by. Default: Patrol Subject (ranger).",
+              "default": [
+                "patrol_subject"
+              ]
+            }
+          },
+          "required": [
+            "vars"
+          ],
+          "type": "object",
+          "title": ""
+        },
+        "summary_rates": {
+          "additionalProperties": false,
+          "properties": {
+            "sanitize": {
+              "default": true,
+              "title": "Sanitize",
+              "type": "boolean",
+              "description": "Whether to sanitize the DataFrame for Arrow/SQLite compatibility before querying. When True (default), complex columns (list, dict, set, bytes) are converted to JSON strings so pandasql/SQLite accepts them, removing the need for the 'columns' whitelist. Geometry columns are preserved. Set to False to pass columns through untouched.",
+              "ecoscope:advanced": true
+            }
+          },
+          "required": [],
+          "type": "object",
+          "title": "Calculate Encounter Rates"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "EarthRangerConnection": {
+      "properties": {
+        "name": {
+          "title": "Data Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "EarthRangerConnection",
+      "type": "object"
+    },
+    "TimezoneInfo": {
+      "properties": {
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "tzCode": {
+          "title": "Tzcode",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "utc": {
+          "title": "Utc",
+          "type": "string"
+        }
+      },
+      "required": [
+        "label",
+        "tzCode",
+        "name",
+        "utc"
+      ],
+      "title": "TimezoneInfo",
+      "type": "object"
+    },
+    "BoundingBox": {
+      "properties": {
+        "min_y": {
+          "default": -90.0,
+          "ecoscope:advanced": true,
+          "title": "Min Latitude",
+          "type": "number"
+        },
+        "max_y": {
+          "default": 90.0,
+          "ecoscope:advanced": true,
+          "title": "Max Latitude",
+          "type": "number"
+        },
+        "min_x": {
+          "default": -180.0,
+          "ecoscope:advanced": true,
+          "title": "Min Longitude",
+          "type": "number"
+        },
+        "max_x": {
+          "default": 180.0,
+          "ecoscope:advanced": true,
+          "title": "Max Longitude",
+          "type": "number"
+        }
+      },
+      "title": "BoundingBox",
+      "type": "object"
+    },
+    "Coordinate": {
+      "properties": {
+        "y": {
+          "description": "Example -0.15293",
+          "title": "Latitude",
+          "type": "number"
+        },
+        "x": {
+          "description": "Example 37.30906",
+          "title": "Longitude",
+          "type": "number"
+        }
+      },
+      "required": [
+        "y",
+        "x"
+      ],
+      "title": "Coordinate",
+      "type": "object"
+    },
+    "TrajectorySegmentFilter": {
+      "properties": {
+        "min_length_meters": {
+          "default": 0.001,
+          "ecoscope:advanced": true,
+          "minimum": 0.001,
+          "title": "Minimum Segment Length (Meters)",
+          "type": "number"
+        },
+        "max_length_meters": {
+          "default": 100000,
+          "ecoscope:advanced": true,
+          "exclusiveMinimum": 0.001,
+          "title": "Maximum Segment Length (Meters)",
+          "type": "number"
+        },
+        "min_time_secs": {
+          "default": 1,
+          "ecoscope:advanced": true,
+          "minimum": 1,
+          "title": "Minimum Segment Duration (Seconds)",
+          "type": "number"
+        },
+        "max_time_secs": {
+          "default": 172800,
+          "ecoscope:advanced": true,
+          "exclusiveMinimum": 1,
+          "title": "Maximum Segment Duration (Seconds)",
+          "type": "number"
+        },
+        "min_speed_kmhr": {
+          "default": 0.01,
+          "ecoscope:advanced": true,
+          "exclusiveMinimum": 0.001,
+          "title": "Minimum Segment Speed (Kilometers per Hour)",
+          "type": "number"
+        },
+        "max_speed_kmhr": {
+          "default": 500,
+          "ecoscope:advanced": true,
+          "exclusiveMinimum": 0.001,
+          "title": "Maximum Segment Speed (Kilometers per Hour)",
+          "type": "number"
+        }
+      },
+      "title": "TrajectorySegmentFilter",
+      "type": "object"
+    },
+    "SpatialGrouper": {
+      "properties": {
+        "spatial_index_name": {
+          "title": "Spatial Regions",
+          "type": "string"
+        }
+      },
+      "required": [
+        "spatial_index_name"
+      ],
+      "title": "Spatial",
+      "type": "object"
+    },
+    "TemporalGrouper": {
+      "properties": {
+        "temporal_index": {
+          "oneOf": [
+            {
+              "const": "%Y",
+              "title": "Year (example: 2024)"
+            },
+            {
+              "const": "%B",
+              "title": "Month (example: September)"
+            },
+            {
+              "const": "%Y-%m",
+              "title": "Year and Month (example: 2023-01)"
+            },
+            {
+              "const": "%j",
+              "title": "Day of the year as a number (example: 365)"
+            },
+            {
+              "const": "%d",
+              "title": "Day of the month as a number (example: 31)"
+            },
+            {
+              "const": "%A",
+              "title": "Day of the week (example: Sunday)"
+            },
+            {
+              "const": "%H",
+              "title": "Hour (24-hour clock) as number (example: 22)"
+            },
+            {
+              "const": "%Y-%m-%d",
+              "title": "Date (example: 2025-01-31)"
+            }
+          ],
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "temporal_index"
+      ],
+      "title": "Time",
+      "type": "object"
+    },
+    "ValueGrouper": {
+      "title": "Category",
+      "type": "object",
+      "properties": {
+        "index_name": {
+          "title": "Index Name",
+          "type": "string",
+          "oneOf": [
+            {
+              "const": "patrol_serial_number",
+              "title": "Patrol Serial Number"
+            },
+            {
+              "const": "patrol_type",
+              "title": "Patrol Type"
+            },
+            {
+              "const": "patrol_subject",
+              "title": "Patrol Subject"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "uiSchema": {
+    "workflow_details": {
+      "ui:order": [
+        "name",
+        "description"
+      ]
+    },
+    "time_range": {
+      "ui:order": [
+        "since",
+        "until",
+        "timezone"
+      ]
+    },
+    "Patrol and Event Types": {
+      "er_params": {
+        "ui:order": [
+          "patrol_types",
+          "event_types",
+          "status"
+        ],
+        "patrol_types": {
+          "items": {
+            "ui:help": "If you are on Ecoscope Desktop, \"Patrol Type\" values can be found in your EarthRanger Admin site under Activity \u2192 Patrol Types."
+          }
+        }
+      }
+    },
+    "Filter Data": {
+      "patrol_filters": {
+        "ui:order": [
+          "bounding_box",
+          "filter_point_coords",
+          "trajectory_segment_filter"
+        ],
+        "filter_point_coords": {
+          "items": {
+            "ui:options": {
+              "label": false
+            }
+          }
+        }
+      }
+    },
+    "Encounter Rate Summary": {
+      "ui:order": [
+        "summary_groupby",
+        "summary_rates"
+      ]
+    },
+    "ui:order": [
+      "workflow_details",
+      "er_client_name",
+      "time_range",
+      "Patrol and Event Types",
+      "Filter Data",
+      "Group Data",
+      "Encounter Rate Summary"
+    ]
+  },
+  "additionalProperties": false
+}
