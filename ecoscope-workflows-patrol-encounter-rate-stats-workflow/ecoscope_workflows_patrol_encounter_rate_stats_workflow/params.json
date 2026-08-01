@@ -254,7 +254,7 @@
               "unit": "h"
             },
             {
-              "metric": "events_per_duration",
+              "metric": "event_sum_per_duration",
               "unit": "h"
             },
             {
@@ -262,7 +262,7 @@
               "unit": "km"
             },
             {
-              "metric": "events_per_distance",
+              "metric": "event_sum_per_distance",
               "unit": "km"
             }
           ],
@@ -272,6 +272,8 @@
                 "area_covered_merged": "#/$defs/MergedAreaCoveredMetric",
                 "area_covered_unmerged": "#/$defs/UnmergedAreaCoveredMetric",
                 "custom": "#/$defs/CustomMetric",
+                "event_sum_per_distance": "#/$defs/EventSumPerDistanceMetric",
+                "event_sum_per_duration": "#/$defs/EventSumPerDurationMetric",
                 "events_per_distance": "#/$defs/EventsPerDistanceMetric",
                 "events_per_duration": "#/$defs/EventsPerDurationMetric",
                 "events_per_patrol": "#/$defs/EventsPerPatrolMetric",
@@ -280,38 +282,12 @@
                 "patrol_days": "#/$defs/PatrolDaysMetric",
                 "total_distance": "#/$defs/TotalDistanceMetric",
                 "total_duration": "#/$defs/TotalDurationMetric",
+                "total_event_sum": "#/$defs/TotalEventSumMetric",
                 "total_events": "#/$defs/TotalEventsMetric"
               },
               "propertyName": "metric"
             },
             "oneOf": [
-              {
-                "$ref": "#/$defs/TotalEventsMetric"
-              },
-              {
-                "$ref": "#/$defs/TotalDurationMetric"
-              },
-              {
-                "$ref": "#/$defs/EventsPerDurationMetric"
-              },
-              {
-                "$ref": "#/$defs/TotalDistanceMetric"
-              },
-              {
-                "$ref": "#/$defs/EventsPerDistanceMetric"
-              },
-              {
-                "$ref": "#/$defs/PatrolCountMetric"
-              },
-              {
-                "$ref": "#/$defs/EventsPerPatrolMetric"
-              },
-              {
-                "$ref": "#/$defs/PatrolDaysMetric"
-              },
-              {
-                "$ref": "#/$defs/EventsPerPatrolDayMetric"
-              },
               {
                 "$ref": "#/$defs/MergedAreaCoveredMetric"
               },
@@ -320,6 +296,42 @@
               },
               {
                 "$ref": "#/$defs/CustomMetric"
+              },
+              {
+                "$ref": "#/$defs/EventSumPerDistanceMetric"
+              },
+              {
+                "$ref": "#/$defs/EventSumPerDurationMetric"
+              },
+              {
+                "$ref": "#/$defs/EventsPerDistanceMetric"
+              },
+              {
+                "$ref": "#/$defs/EventsPerDurationMetric"
+              },
+              {
+                "$ref": "#/$defs/EventsPerPatrolMetric"
+              },
+              {
+                "$ref": "#/$defs/EventsPerPatrolDayMetric"
+              },
+              {
+                "$ref": "#/$defs/PatrolCountMetric"
+              },
+              {
+                "$ref": "#/$defs/PatrolDaysMetric"
+              },
+              {
+                "$ref": "#/$defs/TotalDistanceMetric"
+              },
+              {
+                "$ref": "#/$defs/TotalDurationMetric"
+              },
+              {
+                "$ref": "#/$defs/TotalEventSumMetric"
+              },
+              {
+                "$ref": "#/$defs/TotalEventsMetric"
               }
             ]
           },
@@ -707,6 +719,66 @@
       "title": "Custom",
       "type": "object"
     },
+    "EventSumPerDistanceMetric": {
+      "properties": {
+        "metric": {
+          "const": "event_sum_per_distance",
+          "default": "event_sum_per_distance",
+          "enum": [
+            "event_sum_per_distance"
+          ],
+          "title": "Metric",
+          "type": "string"
+        },
+        "unit": {
+          "default": "km",
+          "oneOf": [
+            {
+              "const": "km",
+              "title": "Kilometers (km)"
+            },
+            {
+              "const": "m",
+              "title": "Meters (m)"
+            }
+          ],
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "title": "Event Sum per Distance",
+      "type": "object"
+    },
+    "EventSumPerDurationMetric": {
+      "properties": {
+        "metric": {
+          "const": "event_sum_per_duration",
+          "default": "event_sum_per_duration",
+          "enum": [
+            "event_sum_per_duration"
+          ],
+          "title": "Metric",
+          "type": "string"
+        },
+        "unit": {
+          "default": "h",
+          "oneOf": [
+            {
+              "const": "h",
+              "title": "Hours (h)"
+            },
+            {
+              "const": "d",
+              "title": "Days (d)"
+            }
+          ],
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "title": "Event Sum per Duration",
+      "type": "object"
+    },
     "EventsPerDistanceMetric": {
       "properties": {
         "metric": {
@@ -908,6 +980,21 @@
         }
       },
       "title": "Total Duration",
+      "type": "object"
+    },
+    "TotalEventSumMetric": {
+      "properties": {
+        "metric": {
+          "const": "total_event_sum",
+          "default": "total_event_sum",
+          "enum": [
+            "total_event_sum"
+          ],
+          "title": "Metric",
+          "type": "string"
+        }
+      },
+      "title": "Total Event Sum",
       "type": "object"
     },
     "TotalEventsMetric": {

@@ -126,14 +126,19 @@ rjsf-overrides:
       EarthRanger Admin site under Activity → Patrol Types.
     Filter Data.patrol_filters.filter_point_coords.items.ui:options.label: false
     # Preset metric rows (patrol-effort-table pattern): per-branch uiSchema,
-    # one entry per union member IN UNION ORDER. ui:options.label false hides
-    # the branch heading (the selector already names it); the hidden metric
-    # widget hides the discriminator dropdown (auto-filled from the branch
-    # default). Union order: total_events, total_duration, events_per_duration,
-    # total_distance, events_per_distance, patrol_count, events_per_patrol,
-    # patrol_days, events_per_patrol_day, area_covered_merged,
-    # area_covered_unmerged, custom.
+    # one entry per union member IN UNION ORDER (alphabetical by title; must
+    # match EncounterRateMetric in ecoscope _patrol_summary.py).
+    # ui:options.label false hides the branch heading (the selector already
+    # names it); the hidden metric widget hides the discriminator dropdown
+    # (auto-filled from the branch default). Union order: area_covered_merged,
+    # area_covered_unmerged, custom, event_sum_per_distance,
+    # event_sum_per_duration, events_per_distance, events_per_duration,
+    # events_per_patrol, events_per_patrol_day, patrol_count, patrol_days,
+    # total_distance, total_duration, total_event_sum, total_events.
     "Encounter Rate Summary.summary_metrics.metrics.items.oneOf":
+      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
+      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
+      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
       - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
       - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
       - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
