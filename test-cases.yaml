@@ -7,7 +7,9 @@
 
 base:
   name: Base
-  description: Mocked IO — primary development case (no credentials needed).
+  description: >-
+    Mocked IO — primary development case (no credentials needed); mirrors the
+    form defaults (Aggregator = Patrol Type).
   mock_io: true
   params:
     workflow_details:
@@ -31,7 +33,7 @@ base:
       groupers: []
     summary_groupers:
       groupers:
-        - index_name: "patrol_subject"
+        - index_name: "patrol_type"
 
 grouped:
   name: Grouped

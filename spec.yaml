@@ -72,15 +72,12 @@ rjsf-overrides:
     "Encounter Rate Summary.properties.summary_groupers.title": ""
     "Encounter Rate Summary.properties.summary_groupers.properties.groupers.title": "Aggregator"
     "Encounter Rate Summary.properties.summary_groupers.properties.groupers.description": >-
-      How to aggregate summary table rows: by category, time period or spatial
-      feature group. Unlike the Group Data groupers above, aggregators do not
-      create separate dashboard views — all aggregators apply within the same
-      view, each adding a grouping column so the table shows one row per
-      combination. Default: Patrol Subject (ranger). Leave empty for a single
-      overall row.
+      Group summary table rows by category, time period or spatial feature
+      group — each aggregator adds a grouping column within the same dashboard
+      view. Leave empty for a single overall row.
     "Encounter Rate Summary.properties.summary_groupers.properties.groupers.items.title": "Aggregator"
     "Encounter Rate Summary.properties.summary_groupers.properties.groupers.default":
-      - index_name: "patrol_subject"
+      - index_name: "patrol_type"
     "Encounter Rate Summary.properties.summary_groupers.properties.groupers.items.anyOf":
       - {"$ref": "#/$defs/ValueGrouper"}
       - {"$ref": "#/$defs/TemporalGrouper"}
@@ -125,6 +122,15 @@ rjsf-overrides:
       If you are on Ecoscope Desktop, "Patrol Type" values can be found in your
       EarthRanger Admin site under Activity → Patrol Types.
     Filter Data.patrol_filters.filter_point_coords.items.ui:options.label: false
+    # Count|Sum aggregation selector (encounter-rate-map pattern): the Event
+    # Field to Total input is revealed by the schema's allOf/if/then only in
+    # "Sum of an Event Field" mode.
+    "Encounter Rate Summary.summary_metrics.aggregation":
+      count_or_sum:
+        ui:help: >-
+          Number of Events counts patrol events; Sum of an Event Field totals a
+          chosen event details field (for example Number of Animals) instead.
+          The Event Sum metrics below follow this choice.
     # Preset metric rows (patrol-effort-table pattern): per-branch uiSchema,
     # one entry per union member IN UNION ORDER (alphabetical by title; must
     # match EncounterRateMetric in ecoscope _patrol_summary.py).

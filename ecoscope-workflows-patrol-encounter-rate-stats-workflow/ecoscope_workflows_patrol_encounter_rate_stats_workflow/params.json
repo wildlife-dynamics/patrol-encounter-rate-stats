@@ -238,16 +238,52 @@
     "summary_metrics": {
       "additionalProperties": false,
       "properties": {
-        "aggregate_column": {
+        "aggregation": {
           "default": null,
-          "title": "Event Field to Sum",
-          "type": "string",
-          "description": "Numeric field on each event to sum up for the event metrics: the total and every per-duration / per-distance / per-patrol rate use this sum as their event count. Leave empty to count event records instead."
+          "title": "",
+          "type": "object",
+          "properties": {
+            "count_or_sum": {
+              "type": "string",
+              "title": "Measure Events By",
+              "default": "Count",
+              "oneOf": [
+                {
+                  "const": "Count",
+                  "title": "Number of Events"
+                },
+                {
+                  "const": "Sum of Column",
+                  "title": "Sum of an Event Field"
+                }
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "count_or_sum": {
+                    "const": "Sum of Column"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "column": {
+                    "type": "string",
+                    "title": "Event Field to Sum",
+                    "description": "Event details field whose values are totaled for the Event Sum metrics (Total Event Sum and the Event Sum rates), using the field title shown in EarthRanger (for example \"Number of Animals\")."
+                  }
+                }
+              }
+            }
+          ]
         },
         "metrics": {
           "default": [
             {
-              "metric": "total_events"
+              "metric": "total_event_sum"
             },
             {
               "metric": "total_duration",
@@ -744,6 +780,12 @@
           ],
           "title": "Unit",
           "type": "string"
+        },
+        "aggregate_column": {
+          "default": "",
+          "description": "Event details field whose values are totaled for this metric, using the field title shown in EarthRanger (for example \"Number of Animals\"). Leave blank to use the task-level Event Field to Sum.",
+          "title": "Event Field to Sum",
+          "type": "string"
         }
       },
       "title": "Event Sum per Distance",
@@ -773,6 +815,12 @@
             }
           ],
           "title": "Unit",
+          "type": "string"
+        },
+        "aggregate_column": {
+          "default": "",
+          "description": "Event details field whose values are totaled for this metric, using the field title shown in EarthRanger (for example \"Number of Animals\"). Leave blank to use the task-level Event Field to Sum.",
+          "title": "Event Field to Sum",
           "type": "string"
         }
       },
@@ -992,6 +1040,12 @@
           ],
           "title": "Metric",
           "type": "string"
+        },
+        "aggregate_column": {
+          "default": "",
+          "description": "Event details field whose values are totaled for this metric, using the field title shown in EarthRanger (for example \"Number of Animals\"). Leave blank to use the task-level Event Field to Sum.",
+          "title": "Event Field to Sum",
+          "type": "string"
         }
       },
       "title": "Total Event Sum",
@@ -1065,7 +1119,7 @@
     },
     "summary_metrics": {
       "ui:order": [
-        "aggregate_column",
+        "aggregation",
         "metrics"
       ]
     },
