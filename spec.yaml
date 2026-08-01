@@ -2,8 +2,10 @@ id: patrol_encounter_rate_stats
 
 requirements:
   # DEV ONLY: local editable ecoscope on branch add-concat-dataframes-task,
-  # which carries the new concat_dataframes task. Before publish, revert to
-  # the first released ecoscope-platform (> 2.17.5) that ships it. Run
+  # which carries concat_dataframes, set_encounter_rate_metrics (+ ratio
+  # metrics in summarize_df), the grouper index helpers, and the index-task
+  # idempotency guards. Before publish, revert to the first released
+  # ecoscope-platform (> 2.17.5) that ships them. Run
   # dev/postcompile-editable.sh after every compile (pydantic + platform
   # patches), then test with --frozen.
   - name: python
