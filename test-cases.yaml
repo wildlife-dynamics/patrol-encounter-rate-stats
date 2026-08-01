@@ -94,6 +94,37 @@ spatial-grouped:
     summary_groupby:
       vars: ["patrol_subject"]
 
+zero-events:
+  name: Zero Events
+  description: >-
+    Mocked IO — event_types filter matches nothing, so the events branch
+    empties and skips; concat_dataframes drops the skip sentinel and
+    ensure_columns keeps the summary computable: the table must still render
+    with Total Events = 0 and effort columns populated (AC 5).
+  mock_io: true
+  params:
+    workflow_details:
+      name: "Patrol Encounter Rate Stats"
+      description: "Per-category encounter rate summary table."
+    er_client_name:
+      data_source:
+        name: "er_asia"
+    time_range:
+      since: "2015-01-10T00:00:00"
+      until: "2015-02-28T23:59:59"
+      timezone:
+        label: "UTC (UTC+00:00)"
+        tzCode: "UTC"
+        name: "(UTC+00:00) UTC"
+        utc: "+00:00"
+    er_params:
+      patrol_types: ["demo_patrol"]
+      event_types: ["no_such_event_type"]
+    groupers:
+      groupers: []
+    summary_groupby:
+      vars: ["patrol_subject"]
+
 by-patrol-type:
   name: By Patrol Type
   description: >-
