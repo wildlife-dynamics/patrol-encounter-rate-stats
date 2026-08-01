@@ -29,8 +29,9 @@ base:
       event_types: []
     groupers:
       groupers: []
-    summary_groupby:
-      vars: ["patrol_subject"]
+    summary_groupers:
+      groupers:
+        - index_name: "patrol_subject"
 
 grouped:
   name: Grouped
@@ -60,8 +61,9 @@ grouped:
       groupers:
         - index_name: "patrol_serial_number"
         - temporal_index: "%B"
-    summary_groupby:
-      vars: ["patrol_subject"]
+    summary_groupers:
+      groupers:
+        - index_name: "patrol_subject"
 
 spatial-grouped:
   name: Spatial Grouped
@@ -91,8 +93,9 @@ spatial-grouped:
     groupers:
       groupers:
         - spatial_index_name: "SpatialGrouperTest"
-    summary_groupby:
-      vars: ["patrol_subject"]
+    summary_groupers:
+      groupers:
+        - index_name: "patrol_subject"
 
 zero-events:
   name: Zero Events
@@ -122,13 +125,14 @@ zero-events:
       event_types: ["no_such_event_type"]
     groupers:
       groupers: []
-    summary_groupby:
-      vars: ["patrol_subject"]
+    summary_groupers:
+      groupers:
+        - index_name: "patrol_subject"
 
 by-patrol-type:
   name: By Patrol Type
   description: >-
-    Mocked IO — multi-column Aggregator [patrol_subject, patrol_type];
+    Mocked IO — multi-column Aggregator [Patrol Subject, Patrol Type];
     exercises multi-column grouping and header renames.
   mock_io: true
   params:
@@ -151,5 +155,106 @@ by-patrol-type:
       event_types: []
     groupers:
       groupers: []
-    summary_groupby:
-      vars: ["patrol_subject", "patrol_type"]
+    summary_groupers:
+      groupers:
+        - index_name: "patrol_subject"
+        - index_name: "patrol_type"
+
+month-aggregator:
+  name: Month Aggregator
+  description: >-
+    Mocked IO — temporal Aggregator (Month): exercises the second-pass
+    add_temporal_index on both branches and the TemporalGrouper_%B -> "Month"
+    header rename, with no Group Data groupers configured.
+  mock_io: true
+  params:
+    workflow_details:
+      name: "Patrol Encounter Rate Stats"
+      description: "Per-category encounter rate summary table."
+    er_client_name:
+      data_source:
+        name: "er_asia"
+    time_range:
+      since: "2015-01-10T00:00:00"
+      until: "2015-02-28T23:59:59"
+      timezone:
+        label: "UTC (UTC+00:00)"
+        tzCode: "UTC"
+        name: "(UTC+00:00) UTC"
+        utc: "+00:00"
+    er_params:
+      patrol_types: ["demo_patrol"]
+      event_types: []
+    groupers:
+      groupers: []
+    summary_groupers:
+      groupers:
+        - temporal_index: "%B"
+
+spatial-aggregator:
+  name: Spatial Aggregator
+  description: >-
+    Mocked IO — spatial Aggregator: exercises the summary-side resolver chain
+    (extract -> fetch -> resolve) and second-pass add_spatial_index on both
+    branches, independent of the Group Data spatial chain.
+  mock_io: true
+  params:
+    workflow_details:
+      name: "Patrol Encounter Rate Stats"
+      description: "Per-category encounter rate summary table."
+    er_client_name:
+      data_source:
+        name: "er_asia"
+    time_range:
+      since: "2015-01-10T00:00:00"
+      until: "2015-02-28T23:59:59"
+      timezone:
+        label: "UTC (UTC+00:00)"
+        tzCode: "UTC"
+        name: "(UTC+00:00) UTC"
+        utc: "+00:00"
+    er_params:
+      patrol_types: ["demo_patrol"]
+      event_types: []
+    groupers:
+      groupers: []
+    summary_groupers:
+      groupers:
+        - spatial_index_name: "SpatialGrouperTest"
+
+metric-subset:
+  name: Metric Subset
+  description: >-
+    Mocked IO — non-default metric picker: a subset of metrics with a unit
+    override, exercising set_encounter_rate_metrics -> summarize_df wiring
+    (preset order defines column order).
+  mock_io: true
+  params:
+    workflow_details:
+      name: "Patrol Encounter Rate Stats"
+      description: "Per-category encounter rate summary table."
+    er_client_name:
+      data_source:
+        name: "er_asia"
+    time_range:
+      since: "2015-01-10T00:00:00"
+      until: "2015-02-28T23:59:59"
+      timezone:
+        label: "UTC (UTC+00:00)"
+        tzCode: "UTC"
+        name: "(UTC+00:00) UTC"
+        utc: "+00:00"
+    er_params:
+      patrol_types: ["demo_patrol"]
+      event_types: []
+    groupers:
+      groupers: []
+    summary_groupers:
+      groupers:
+        - index_name: "patrol_subject"
+    summary_metrics:
+      metrics:
+        - metric: "patrol_count"
+        - metric: "total_distance"
+          unit: "m"
+        - metric: "events_per_km"

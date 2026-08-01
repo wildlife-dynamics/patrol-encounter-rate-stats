@@ -207,22 +207,107 @@
       "required": [],
       "title": "Group Data"
     },
-    "summary_groupby": {
+    "summary_groupers": {
       "additionalProperties": false,
       "properties": {
-        "vars": {
+        "groupers": {
+          "default": null,
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ValueGrouper"
+              },
+              {
+                "$ref": "#/$defs/TemporalGrouper"
+              },
+              {
+                "$ref": "#/$defs/SpatialGrouper"
+              }
+            ],
+            "title": "Group by"
           },
-          "title": "",
-          "type": "array"
+          "title": " ",
+          "type": "array",
+          "description": "            Specify how the data should be grouped to create the views for your dashboard.\n            This field is optional; if left blank, all the data will appear in a single view.\n            "
         }
       },
-      "required": [
-        "vars"
-      ],
       "type": "object",
+      "required": [],
       "title": "Aggregator"
+    },
+    "summary_metrics": {
+      "additionalProperties": false,
+      "properties": {
+        "metrics": {
+          "default": [
+            {
+              "metric": "patrol_count"
+            },
+            {
+              "metric": "total_events"
+            },
+            {
+              "metric": "total_distance",
+              "unit": "km"
+            },
+            {
+              "metric": "total_duration",
+              "unit": "h"
+            },
+            {
+              "metric": "events_per_hour"
+            },
+            {
+              "metric": "events_per_km"
+            }
+          ],
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "events_per_hour": "#/$defs/EventsPerHourMetric",
+                "events_per_km": "#/$defs/EventsPerKmMetric",
+                "patrol_count": "#/$defs/PatrolCountMetric",
+                "total_distance": "#/$defs/TotalDistanceMetric",
+                "total_duration": "#/$defs/TotalDurationMetric",
+                "total_events": "#/$defs/TotalEventsMetric"
+              },
+              "propertyName": "metric"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/PatrolCountMetric"
+              },
+              {
+                "$ref": "#/$defs/TotalEventsMetric"
+              },
+              {
+                "$ref": "#/$defs/TotalDistanceMetric"
+              },
+              {
+                "$ref": "#/$defs/TotalDurationMetric"
+              },
+              {
+                "$ref": "#/$defs/EventsPerHourMetric"
+              },
+              {
+                "$ref": "#/$defs/EventsPerKmMetric"
+              }
+            ]
+          },
+          "title": "Metrics",
+          "type": "array",
+          "description": "Metrics shown as columns in the encounter rate table. Add or remove rows to customize."
+        },
+        "aggregate_column": {
+          "default": null,
+          "title": "Aggregate Column",
+          "type": "string",
+          "description": "Numeric event column driving the event metrics (total events and both rates). If unset, event rows are counted instead of summed."
+        }
+      },
+      "type": "object",
+      "required": [],
+      "title": "Metrics"
     }
   },
   "$defs": {
@@ -437,6 +522,126 @@
       ],
       "title": "Category",
       "type": "object"
+    },
+    "EventsPerHourMetric": {
+      "properties": {
+        "metric": {
+          "const": "events_per_hour",
+          "default": "events_per_hour",
+          "enum": [
+            "events_per_hour"
+          ],
+          "title": "Metric",
+          "type": "string"
+        }
+      },
+      "title": "Events per Hour",
+      "type": "object"
+    },
+    "EventsPerKmMetric": {
+      "properties": {
+        "metric": {
+          "const": "events_per_km",
+          "default": "events_per_km",
+          "enum": [
+            "events_per_km"
+          ],
+          "title": "Metric",
+          "type": "string"
+        }
+      },
+      "title": "Events per Km",
+      "type": "object"
+    },
+    "PatrolCountMetric": {
+      "properties": {
+        "metric": {
+          "const": "patrol_count",
+          "default": "patrol_count",
+          "enum": [
+            "patrol_count"
+          ],
+          "title": "Metric",
+          "type": "string"
+        }
+      },
+      "title": "Patrol Count",
+      "type": "object"
+    },
+    "TotalDistanceMetric": {
+      "properties": {
+        "metric": {
+          "const": "total_distance",
+          "default": "total_distance",
+          "enum": [
+            "total_distance"
+          ],
+          "title": "Metric",
+          "type": "string"
+        },
+        "unit": {
+          "default": "km",
+          "oneOf": [
+            {
+              "const": "km",
+              "title": "Kilometers (km)"
+            },
+            {
+              "const": "m",
+              "title": "Meters (m)"
+            }
+          ],
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "title": "Total Distance",
+      "type": "object"
+    },
+    "TotalDurationMetric": {
+      "properties": {
+        "metric": {
+          "const": "total_duration",
+          "default": "total_duration",
+          "enum": [
+            "total_duration"
+          ],
+          "title": "Metric",
+          "type": "string"
+        },
+        "unit": {
+          "default": "h",
+          "oneOf": [
+            {
+              "const": "h",
+              "title": "Hours (h)"
+            },
+            {
+              "const": "d",
+              "title": "Days (d)"
+            }
+          ],
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "title": "Total Duration",
+      "type": "object"
+    },
+    "TotalEventsMetric": {
+      "properties": {
+        "metric": {
+          "const": "total_events",
+          "default": "total_events",
+          "enum": [
+            "total_events"
+          ],
+          "title": "Metric",
+          "type": "string"
+        }
+      },
+      "title": "Total Events",
+      "type": "object"
     }
   },
   "uiSchema": {
@@ -467,6 +672,12 @@
         "trajectory_segment_filter"
       ]
     },
+    "summary_metrics": {
+      "ui:order": [
+        "metrics",
+        "aggregate_column"
+      ]
+    },
     "ui:order": [
       "workflow_details",
       "er_client_name",
@@ -474,7 +685,8 @@
       "er_params",
       "patrol_filters",
       "groupers",
-      "summary_groupby"
+      "summary_groupers",
+      "summary_metrics"
     ]
   },
   "additionalProperties": false

@@ -33,11 +33,6 @@ requirements:
   - name: pydeck
     version: 0.9.2
     channel: conda-forge
-  # Latest published ext-custom — only needed for apply_sql_query; no local
-  # changes required, so pin the release.
-  - name: ecoscope-workflows-ext-custom
-    version: "0.1.0rc23"
-    channel: https://repo.prefix.dev/ecoscope-workflows-custom/
 
 rjsf-overrides:
   properties:
@@ -71,16 +66,25 @@ rjsf-overrides:
           type: spatial_feature_group
           depends_on: properties.er_client_name.properties.data_source.properties.name
 
-    # --- Encounter Rate Summary: Aggregator ---
-    "Encounter Rate Summary.properties.summary_groupby.title": ""
-    "Encounter Rate Summary.properties.summary_groupby.properties.vars.title": "Aggregator"
-    "Encounter Rate Summary.properties.summary_groupby.properties.vars.description": >-
-      Category to group summary rows by. Default: Patrol Subject (ranger).
-    "Encounter Rate Summary.properties.summary_groupby.properties.vars.default": ["patrol_subject"]
-    "Encounter Rate Summary.properties.summary_groupby.properties.vars.items.oneOf":
-      - {const: "patrol_subject", title: "Patrol Subject"}
-      - {const: "patrol_type", title: "Patrol Type"}
-      - {const: "patrol_serial_number", title: "Patrol Serial Number"}
+    # --- Encounter Rate Summary: Aggregator (groupers list) + Metrics ---
+    "Encounter Rate Summary.properties.summary_groupers.title": ""
+    "Encounter Rate Summary.properties.summary_groupers.properties.groupers.title": "Aggregator"
+    "Encounter Rate Summary.properties.summary_groupers.properties.groupers.description": >-
+      How to aggregate summary table rows: by category, time period or spatial
+      feature group. Default: Patrol Subject (ranger). Leave empty for a single
+      overall row.
+    "Encounter Rate Summary.properties.summary_groupers.properties.groupers.default":
+      - index_name: "patrol_subject"
+    "Encounter Rate Summary.properties.summary_groupers.properties.groupers.items.anyOf":
+      - {"$ref": "#/$defs/ValueGrouper"}
+      - {"$ref": "#/$defs/TemporalGrouper"}
+      - {"$ref": "#/$defs/SpatialGrouper"}
+    "Encounter Rate Summary.properties.summary_groupers.properties.groupers.ecoscope:transform":
+      - transformer: EarthRangerEnumResolver
+        transformer_kws:
+          type: spatial_feature_group
+          depends_on: properties.er_client_name.properties.data_source.properties.name
+    "Encounter Rate Summary.properties.summary_metrics.title": ""
 
     # --- Filter Data card ---
     "Filter Data.properties.patrol_filters.title": ""
@@ -249,6 +253,46 @@ workflow:
     partial:
       var: "Encounter Rate Summary"
 
+  # ---------- Encounter Rate Summary (config card: aggregator + metric picker) ----------
+  # Independent set_groupers instance (own id, own spatial resolver chain) —
+  # no coupling to the Group Data dashboard groupers.
+  - title: Encounter Rate Summary
+    type: task-group
+    description: >-
+      Per-group encounter rate metrics. Configure how table rows are aggregated
+      and which metric columns appear.
+    tasks:
+      - name: Aggregator
+        id: summary_groupers
+        task: set_groupers
+
+      - name: Metrics
+        id: summary_metrics
+        task: set_encounter_rate_metrics
+
+  # Resolve spatial aggregator groupers (no-op when none configured).
+  - task: extract_spatial_grouper_feature_group_names
+    id: summary_spatial_group_ids
+    partial:
+      groupers: ${{ workflow.summary_groupers.return }}
+
+  - task: get_spatial_features_group
+    id: fetch_summary_spatial_groups
+    partial:
+      client: ${{ workflow.er_client_name.return }}
+    map:
+      argnames: spatial_features_group_name
+      argvalues: ${{ workflow.summary_spatial_group_ids.return }}
+
+  - task: resolve_spatial_feature_groups_for_spatial_groupers
+    id: resolved_summary_groupers
+    skipif:
+      conditions:
+        - never
+    partial:
+      groupers: ${{ workflow.summary_groupers.return }}
+      spatial_feature_groups: ${{ workflow.fetch_summary_spatial_groups.return }}
+
   # ---------- Process Patrol Observations → Trajectories ----------
   - title: Process Patrol Observations
     type: task-group
@@ -328,6 +372,25 @@ workflow:
           gdf: ${{ workflow.traj_temporal_index.return }}
           groupers: ${{ workflow.resolved_groupers.return }}
 
+      # Second index pass for the summary Aggregator; idempotency guards in
+      # the index tasks skip groupers already applied by the Group Data pass.
+      - name: Add Aggregator Temporal Index to Trajectories
+        id: traj_agg_temporal_index
+        task: add_temporal_index
+        partial:
+          df: ${{ workflow.traj_spatial_index.return }}
+          time_col: segment_start
+          groupers: ${{ workflow.resolved_summary_groupers.return }}
+          cast_to_datetime: true
+          format: mixed
+
+      - name: Add Aggregator Spatial Index to Trajectories
+        id: traj_agg_spatial_index
+        task: add_spatial_index
+        partial:
+          gdf: ${{ workflow.traj_agg_temporal_index.return }}
+          groupers: ${{ workflow.resolved_summary_groupers.return }}
+
   # ---------- Process Patrol Events ----------
   - title: Process Patrol Events
     type: task-group
@@ -379,6 +442,24 @@ workflow:
           gdf: ${{ workflow.events_temporal_index.return }}
           groupers: ${{ workflow.resolved_groupers.return }}
 
+      # Second index pass for the summary Aggregator (see trajectories branch).
+      - name: Add Aggregator Temporal Index to Events
+        id: events_agg_temporal_index
+        task: add_temporal_index
+        partial:
+          df: ${{ workflow.events_spatial_index.return }}
+          time_col: time
+          groupers: ${{ workflow.resolved_summary_groupers.return }}
+          cast_to_datetime: true
+          format: mixed
+
+      - name: Add Aggregator Spatial Index to Events
+        id: events_agg_spatial_index
+        task: add_spatial_index
+        partial:
+          gdf: ${{ workflow.events_agg_temporal_index.return }}
+          groupers: ${{ workflow.resolved_summary_groupers.return }}
+
   # ---------- Combine & Split ----------
   # concat_dataframes drops skip sentinels, so an empty events branch degrades
   # to "0 events", not a failed run.
@@ -390,8 +471,8 @@ workflow:
         - never
     partial:
       dfs:
-        - ${{ workflow.traj_spatial_index.return }}
-        - ${{ workflow.events_spatial_index.return }}
+        - ${{ workflow.traj_agg_spatial_index.return }}
+        - ${{ workflow.events_agg_spatial_index.return }}
       ensure_columns:
         - event_type
         - patrol_id
@@ -420,121 +501,83 @@ workflow:
       groupers: ${{ workflow.resolved_groupers.return }}
 
   # ---------- Encounter Rate Summary (one table widget) ----------
-  - title: Encounter Rate Summary
-    type: task-group
-    description: "Per-category encounter rate metrics. Choose the category to group rows by."
-    tasks:
-      - name: Aggregator
-        id: summary_groupby
-        task: set_list_of_string_vars
+  # All params here are wired/bound — the user-facing card is the config
+  # task-group defined above (summary_groupers + summary_metrics).
+  - name: Extract Aggregator Columns
+    id: summary_groupby_cols
+    task: extract_grouper_index_names
+    partial:
+      groupers: ${{ workflow.resolved_summary_groupers.return }}
 
-      # Raw sums/counts per category. `count` on event_type counts only event
-      # rows; `sum` on dist/timespan sums only segment rows (NaN on the other
-      # row type is skipped by pandas).
-      - name: Summarize Encounter Stats
-        id: summary_stats
-        task: summarize_df
-        partial:
-          reset_index: true
-          groupby_cols: ${{ workflow.summary_groupby.return }}
-          summary_params:
-            - display_name: "patrol_count"
-              aggregator: nunique
-              column: patrol_id
-              decimal_places: 0
-            - display_name: "total_events"
-              aggregator: count
-              column: event_type
-              decimal_places: 0
-            - display_name: "total_dist_m"
-              aggregator: sum
-              column: dist_meters
-            - display_name: "total_time_s"
-              aggregator: sum
-              column: timespan_seconds
-        mapvalues:
-          argnames: df
-          argvalues: ${{ workflow.split_combined.return }}
+  # Groups by the aggregator index names (columns for Category groupers,
+  # index levels added by the second index pass for Time/Spatial). Metric
+  # columns come from the summary_metrics presets; ratio metrics render NA
+  # when the denominator (effort) is 0. Empty aggregator -> one overall row.
+  - name: Summarize Encounter Stats
+    id: summary_stats
+    task: summarize_df
+    partial:
+      reset_index: true
+      groupby_cols: ${{ workflow.summary_groupby_cols.return }}
+      summary_params: ${{ workflow.summary_metrics.return }}
+    mapvalues:
+      argnames: df
+      argvalues: ${{ workflow.split_combined.return }}
 
-      # Row-wise unit conversions + ratios (no GROUP BY — rows are already
-      # per-category). NULLIF guards zero effort; those cells render empty.
-      - name: Calculate Encounter Rates
-        id: summary_rates
-        task: apply_sql_query
-        partial:
-          query: >-
-            SELECT
-              *,
-              ROUND(total_time_s / 3600.0, 1) AS "Total Patrol Hours",
-              ROUND(total_dist_m / 1000.0, 1) AS "Total Patrol Km",
-              ROUND(total_events * 3600.0 / NULLIF(total_time_s, 0), 2) AS "Events per Hour",
-              ROUND(total_events * 1000.0 / NULLIF(total_dist_m, 0), 2) AS "Events per Km"
-            FROM df
-          columns: null
-          sanitize: true
-        mapvalues:
-          argnames: df
-          argvalues: ${{ workflow.summary_stats.return }}
+  # index_name -> display_name headers (e.g. patrol_subject -> "Patrol
+  # Subject", TemporalGrouper_%B -> "Month"). Metric headers are already
+  # final display names from the presets.
+  - name: Rename Aggregator Columns
+    id: summary_rename
+    task: rename_grouper_index_columns
+    partial:
+      groupers: ${{ workflow.resolved_summary_groupers.return }}
+    mapvalues:
+      argnames: df
+      argvalues: ${{ workflow.summary_stats.return }}
 
-      - name: Rename Summary Columns
-        id: summary_rename
-        task: map_columns
-        partial:
-          drop_columns: ["total_dist_m", "total_time_s"]
-          retain_columns: []
-          rename_columns:
-            patrol_subject: "Patrol Subject"
-            patrol_type: "Patrol Type"
-            patrol_serial_number: "Patrol Serial Number"
-            patrol_count: "Number of Patrols"
-            total_events: "Total Events"
-          raise_if_not_found: false
-        mapvalues:
-          argnames: df
-          argvalues: ${{ workflow.summary_rates.return }}
+  - name: Draw Summary Table
+    id: summary_table
+    task: draw_table
+    partial:
+      columns: null
+      widget_id: ${{ workflow.set_summary_title.return }}
+      table_config:
+        enable_sorting: true
+        enable_filtering: false
+        enable_download: true
+        hide_header: false
+    mapvalues:
+      argnames: dataframe
+      argvalues: ${{ workflow.summary_rename.return }}
 
-      - name: Draw Summary Table
-        id: summary_table
-        task: draw_table
-        partial:
-          columns: null
-          widget_id: ${{ workflow.set_summary_title.return }}
-          table_config:
-            enable_sorting: true
-            enable_filtering: false
-            enable_download: true
-            hide_header: false
-        mapvalues:
-          argnames: dataframe
-          argvalues: ${{ workflow.summary_rename.return }}
+  - name: Persist Summary Table
+    id: summary_html
+    task: persist_text
+    partial:
+      root_path: ${{ env.ECOSCOPE_WORKFLOWS_RESULTS }}
+      filename_suffix: encounter_rate_summary
+    mapvalues:
+      argnames: text
+      argvalues: ${{ workflow.summary_table.return }}
 
-      - name: Persist Summary Table
-        id: summary_html
-        task: persist_text
-        partial:
-          root_path: ${{ env.ECOSCOPE_WORKFLOWS_RESULTS }}
-          filename_suffix: encounter_rate_summary
-        mapvalues:
-          argnames: text
-          argvalues: ${{ workflow.summary_table.return }}
+  - name: Create Summary Table Widget
+    id: summary_widget
+    task: create_table_widget_single_view
+    skipif:
+      conditions:
+        - never
+    partial:
+      title: ${{ workflow.set_summary_title.return }}
+    map:
+      argnames: [view, data]
+      argvalues: ${{ workflow.summary_html.return }}
 
-      - name: Create Summary Table Widget
-        id: summary_widget
-        task: create_table_widget_single_view
-        skipif:
-          conditions:
-            - never
-        partial:
-          title: ${{ workflow.set_summary_title.return }}
-        map:
-          argnames: [view, data]
-          argvalues: ${{ workflow.summary_html.return }}
-
-      - name: Merge Summary Table Views
-        id: summary_widget_merged
-        task: merge_widget_views
-        partial:
-          widgets: ${{ workflow.summary_widget.return }}
+  - name: Merge Summary Table Views
+    id: summary_widget_merged
+    task: merge_widget_views
+    partial:
+      widgets: ${{ workflow.summary_widget.return }}
 
   # ---------- Dashboard ----------
   - name: Create Dashboard
