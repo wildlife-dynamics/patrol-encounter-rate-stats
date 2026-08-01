@@ -5,8 +5,8 @@
 
 ```yaml
 # fingerprint:
-artifacts_sha256_basic: 0cdd323b870a276aa22738ccaeaee6719c49aa4a1c2d26f35782fcd7d8b0c410
-artifacts_sha256_strict: 51454d64352b0f432c23ce16a257cdc894c5370847c52818fd5bbcc80160886b
+artifacts_sha256_basic: 5ee004c711f7a1fad63348e546eb4a31431941f857dc3b7f34844e29b9b92d57
+artifacts_sha256_strict: db9b6d8e98a9b41018e4651e3905f00c2c66109b93c5c95c84d4cfeffb329891
 installed_requirements:
 - channel: conda-forge
   name: python
@@ -29,8 +29,8 @@ installed_requirements:
 - channel: https://repo.prefix.dev/ecoscope-workflows-custom/
   name: ecoscope-workflows-ext-custom
   version: {version: ==0.1.0rc23}
-params_sha256: b175907bd8d5aec229f5d117edce5411b8ca7424b5a9b20f50f65ad9a9c77d1b
-spec_sha256: d65abdab3ea42bfd7a361aa350835ebd4818193a8edd3d598ee5083861513a2f
+params_sha256: ab7e75e9cc2b0e9836dadd2aed50ce6e8dc461f9a7e94769ad61c5fd76ad7b9a
+spec_sha256: 10fc6ffa5ce9d484d79559dde4ce26c2d68ac79bca17895d7d6dbb6388466f9d
 
 ```
 

@@ -866,6 +866,7 @@ def main(params: dict[str, Any], validate_params_schema: bool = True):
         .partial(
             query='SELECT\n  *,\n  ROUND(total_time_s / 3600.0, 1) AS "Total Patrol Hours",\n  ROUND(total_dist_m / 1000.0, 1) AS "Total Patrol Km",\n  ROUND(total_events * 3600.0 / NULLIF(total_time_s, 0), 2) AS "Events per Hour",\n  ROUND(total_events * 1000.0 / NULLIF(total_dist_m, 0), 2) AS "Events per Km"\nFROM df',
             columns=None,
+            sanitize=True,
             **(params.get("summary_rates") or {}),
         )
         .mapvalues(argnames=["df"], argvalues=summary_stats)

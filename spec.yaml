@@ -471,6 +471,7 @@ workflow:
               ROUND(total_events * 1000.0 / NULLIF(total_dist_m, 0), 2) AS "Events per Km"
             FROM df
           columns: null
+          sanitize: true
         mapvalues:
           argnames: df
           argvalues: ${{ workflow.summary_stats.return }}
