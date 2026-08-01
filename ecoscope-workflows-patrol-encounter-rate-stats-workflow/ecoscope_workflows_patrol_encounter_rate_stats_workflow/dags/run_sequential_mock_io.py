@@ -103,6 +103,9 @@ from ecoscope.platform.tasks.transformation import (
     convert_values_to_timezone as convert_values_to_timezone,
 )
 from ecoscope.platform.tasks.transformation import (
+    decompose_datetime as decompose_datetime,
+)
+from ecoscope.platform.tasks.transformation import (
     drop_column_prefix as drop_column_prefix,
 )
 from ecoscope.platform.tasks.transformation import (
@@ -663,6 +666,30 @@ def main(params: dict[str, Any], validate_params_schema: bool = True):
         .call()
     )
 
+    traj_with_date = (
+        task(decompose_datetime)
+        .validate()
+        .set_task_instance_id("traj_with_date")
+        .handle_errors()
+        .with_tracing()
+        .skipif(
+            conditions=[
+                any_is_empty_df,
+                any_dependency_skipped,
+            ],
+            unpack_depth=1,
+        )
+        .partial(
+            df=traj_rename_cols,
+            datetime_column="segment_start",
+            components=["date"],
+            remove_source=False,
+            column_prefix=None,
+            **(params.get("traj_with_date") or {}),
+        )
+        .call()
+    )
+
     traj_temporal_index = (
         task(add_temporal_index)
         .validate()
@@ -677,7 +704,7 @@ def main(params: dict[str, Any], validate_params_schema: bool = True):
             unpack_depth=1,
         )
         .partial(
-            df=traj_rename_cols,
+            df=traj_with_date,
             time_col="segment_start",
             groupers=resolved_groupers,
             cast_to_datetime=True,
@@ -931,6 +958,7 @@ def main(params: dict[str, Any], validate_params_schema: bool = True):
                 "patrol_id",
                 "dist_meters",
                 "timespan_seconds",
+                "segment_start_date",
                 "patrol_subject",
                 "patrol_type",
                 "patrol_serial_number",

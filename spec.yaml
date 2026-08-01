@@ -73,8 +73,12 @@ rjsf-overrides:
     "Encounter Rate Summary.properties.summary_groupers.properties.groupers.title": "Aggregator"
     "Encounter Rate Summary.properties.summary_groupers.properties.groupers.description": >-
       How to aggregate summary table rows: by category, time period or spatial
-      feature group. Default: Patrol Subject (ranger). Leave empty for a single
+      feature group. Unlike the Group Data groupers above, aggregators do not
+      create separate dashboard views — all aggregators apply within the same
+      view, each adding a grouping column so the table shows one row per
+      combination. Default: Patrol Subject (ranger). Leave empty for a single
       overall row.
+    "Encounter Rate Summary.properties.summary_groupers.properties.groupers.items.title": "Aggregator"
     "Encounter Rate Summary.properties.summary_groupers.properties.groupers.default":
       - index_name: "patrol_subject"
     "Encounter Rate Summary.properties.summary_groupers.properties.groupers.items.anyOf":
@@ -121,6 +125,27 @@ rjsf-overrides:
       If you are on Ecoscope Desktop, "Patrol Type" values can be found in your
       EarthRanger Admin site under Activity → Patrol Types.
     Filter Data.patrol_filters.filter_point_coords.items.ui:options.label: false
+    # Preset metric rows (patrol-effort-table pattern): per-branch uiSchema,
+    # one entry per union member IN UNION ORDER. ui:options.label false hides
+    # the branch heading (the selector already names it); the hidden metric
+    # widget hides the discriminator dropdown (auto-filled from the branch
+    # default). Union order: total_events, total_duration, events_per_duration,
+    # total_distance, events_per_distance, patrol_count, events_per_patrol,
+    # patrol_days, events_per_patrol_day, area_covered_merged,
+    # area_covered_unmerged, custom.
+    "Encounter Rate Summary.summary_metrics.metrics.items.oneOf":
+      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
+      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
+      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
+      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
+      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
+      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
+      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
+      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
+      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
+      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
+      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
+      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
 
 task-instance-defaults:
   skipif:
@@ -357,11 +382,26 @@ workflow:
             patrol_type__value: patrol_type
           raise_if_not_found: false
 
+      # Patrol days = distinct calendar days with patrol MOVEMENT: the
+      # patrol_days / events_per_patrol_day metrics take nunique of the
+      # deterministic `segment_start_date` column added here (bound
+      # column_prefix, patrol-effort-table pattern).
+      - name: Add Patrol Date
+        id: traj_with_date
+        task: decompose_datetime
+        partial:
+          df: ${{ workflow.traj_rename_cols.return }}
+          datetime_column: segment_start
+          components:
+            - date
+          remove_source: false
+          column_prefix: null
+
       - name: Add Temporal Index to Trajectories
         id: traj_temporal_index
         task: add_temporal_index
         partial:
-          df: ${{ workflow.traj_rename_cols.return }}
+          df: ${{ workflow.traj_with_date.return }}
           time_col: segment_start
           groupers: ${{ workflow.resolved_groupers.return }}
           cast_to_datetime: true
@@ -480,6 +520,7 @@ workflow:
         - patrol_id
         - dist_meters
         - timespan_seconds
+        - segment_start_date
         - patrol_subject
         - patrol_type
         - patrol_serial_number
