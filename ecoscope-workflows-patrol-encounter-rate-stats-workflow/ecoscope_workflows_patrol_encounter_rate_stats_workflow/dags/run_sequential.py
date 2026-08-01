@@ -720,7 +720,7 @@ def main(params: dict[str, Any], validate_params_schema: bool = True):
                 "patrol_type",
                 "patrol_serial_number",
             ],
-            reset_index=True,
+            reset_index=False,
             **(params.get("combined_df") or {}),
         )
         .call()

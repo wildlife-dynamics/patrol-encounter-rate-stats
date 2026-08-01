@@ -400,7 +400,10 @@ workflow:
         - patrol_subject
         - patrol_type
         - patrol_serial_number
-      reset_index: true
+      # Keep the index: add_temporal_index / add_spatial_index append grouper
+      # keys as index levels (e.g. TemporalGrouper_%B), and split_groups groups
+      # by those level names. reset_index would discard them.
+      reset_index: false
 
   - name: Cast Category Columns to String
     id: combined_to_string
