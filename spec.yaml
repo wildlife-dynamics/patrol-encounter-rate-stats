@@ -1,11 +1,544 @@
 id: patrol_encounter_rate_stats
 
 requirements:
-  - name: "ecoscope-platform"
-    version: ">=2.15.0, <2.16.0"
-    channel: "https://repo.prefix.dev/ecoscope-workflows/"
-  - name: "ecoscope-workflows-ext-custom"
-    version: "0.1.0rc14"
-    channel: "https://repo.prefix.dev/ecoscope-workflows-custom/"
+  # DEV ONLY: local editable ecoscope on branch add-concat-dataframes-task,
+  # which carries the new concat_dataframes task. Before publish, revert to
+  # the first released ecoscope-platform (> 2.17.5) that ships it. Run
+  # dev/postcompile-editable.sh after every compile (pydantic + platform
+  # patches), then test with --frozen.
+  - name: python
+    version: "3.12.*"
+  - name: ecoscope
+    path: /Users/yunwu/MEP/wt-tasks/ecoscope
+    editable: true
+    extras: ["platform", "mapping", "analysis"]
+  # Editable-mode conda pins (see ecoscope-spec.md "editable dev-mode pitfalls"):
+  # lonboard ==0.0.8 only exists as the conda build on the ecoscope-workflows
+  # channel; numpy is pinned strictly by ecoscope;
+  # ecoscope-earthranger-io-core (git dep) requires pyarrow <24;
+  # rasterio <1.5 keeps libgdal below the lonboard->pyogrio conflict and PyPI
+  # rasterio 1.5.0 has no osx-arm64 wheel.
+  - name: lonboard
+    version: "==0.0.8"
+    channel: https://repo.prefix.dev/ecoscope-workflows/
+  - name: numpy
+    version: ">=2,<2.1"
+    channel: conda-forge
+  - name: pyarrow
+    version: ">=20,<24"
+    channel: conda-forge
+  - name: rasterio
+    version: ">=1.3,<1.5"
+    channel: conda-forge
+  - name: pydeck
+    version: 0.9.2
+    channel: conda-forge
+  # Latest published ext-custom — only needed for apply_sql_query; no local
+  # changes required, so pin the release.
+  - name: ecoscope-workflows-ext-custom
+    version: "0.1.0rc23"
+    channel: https://repo.prefix.dev/ecoscope-workflows-custom/
 
-workflow: []
+rjsf-overrides:
+  properties:
+    # --- Patrol and Event Types ---
+    "Patrol and Event Types.properties.er_params.title": ""
+    "Patrol and Event Types.properties.er_params.properties.patrol_types.ecoscope:transform":
+      - transformer: EarthRangerEnumResolver
+        transformer_kws:
+          type: patrol_type
+          depends_on: properties.er_client_name.properties.data_source.properties.name
+    "Patrol and Event Types.properties.er_params.properties.patrol_types.description": >-
+      Specify the patrol type(s) to analyze (optional). Leave empty to analyze
+      all patrol types.
+    "Patrol and Event Types.properties.er_params.properties.event_types.description": >-
+      Specify the event type(s) to count (optional). Enter the "Event Types"
+      value for each event type — one per field (e.g. "wildlife_sighting_rep").
+      Leave empty to count all patrol events.
+    "Patrol and Event Types.properties.er_params.properties.event_types.default": []
+    "Patrol and Event Types.properties.er_params.properties.status.default": ["done"]
+
+    # --- Group Data: Value + Temporal + Spatial groupers ---
+    "Group Data.properties.groupers.title": ""
+    "Group Data.properties.groupers.properties.groupers.description": ""
+    "Group Data.properties.groupers.properties.groupers.items.anyOf":
+      - {"$ref": "#/$defs/ValueGrouper"}
+      - {"$ref": "#/$defs/TemporalGrouper"}
+      - {"$ref": "#/$defs/SpatialGrouper"}
+    "Group Data.properties.groupers.properties.groupers.ecoscope:transform":
+      - transformer: EarthRangerEnumResolver
+        transformer_kws:
+          type: spatial_feature_group
+          depends_on: properties.er_client_name.properties.data_source.properties.name
+
+    # --- Encounter Rate Summary: Aggregator ---
+    "Encounter Rate Summary.properties.summary_groupby.title": ""
+    "Encounter Rate Summary.properties.summary_groupby.properties.vars.title": "Aggregator"
+    "Encounter Rate Summary.properties.summary_groupby.properties.vars.description": >-
+      Category to group summary rows by. Default: Patrol Subject (ranger).
+    "Encounter Rate Summary.properties.summary_groupby.properties.vars.default": ["patrol_subject"]
+    "Encounter Rate Summary.properties.summary_groupby.properties.vars.items.oneOf":
+      - {const: "patrol_subject", title: "Patrol Subject"}
+      - {const: "patrol_type", title: "Patrol Type"}
+      - {const: "patrol_serial_number", title: "Patrol Serial Number"}
+
+    # --- Filter Data card ---
+    "Filter Data.properties.patrol_filters.title": ""
+    "Filter Data.properties.patrol_filters.properties.bounding_box.description": >-
+      Only include patrol observations and events whose coordinates fall inside
+      this bounding box.
+    "Filter Data.properties.patrol_filters.properties.filter_point_coords.description": >-
+      Exclude observations and events recorded at these exact coordinates
+      (e.g. known bad GPS fixes).
+    "Filter Data.properties.patrol_filters.properties.trajectory_segment_filter.description": >-
+      Drop trajectory segments outside these length / time / speed bounds
+      (e.g. to remove implausible jumps).
+
+  $defs:
+    ValueGrouper:
+      title: "Category"
+      type: "object"
+      properties:
+        index_name:
+          title: "Index Name"
+          type: "string"
+          oneOf:
+            - const: "patrol_serial_number"
+              title: "Patrol Serial Number"
+            - const: "patrol_type"
+              title: "Patrol Type"
+            - const: "patrol_subject"
+              title: "Patrol Subject"
+
+  uiSchema:
+    Patrol and Event Types.er_params.patrol_types.items.ui:help: >-
+      If you are on Ecoscope Desktop, "Patrol Type" values can be found in your
+      EarthRanger Admin site under Activity → Patrol Types.
+    Filter Data.patrol_filters.filter_point_coords.items.ui:options.label: false
+
+task-instance-defaults:
+  skipif:
+    conditions:
+      - any_is_empty_df
+      - any_dependency_skipped
+
+workflow:
+  # ---------- Setup ----------
+  - name: Workflow Details
+    id: workflow_details
+    task: set_workflow_details
+
+  - name: Data Source
+    id: er_client_name
+    task: set_er_connection
+
+  - name: Time Range
+    id: time_range
+    task: set_time_range
+    partial:
+      time_format: '%d %b %Y %H:%M:%S %Z'
+
+  - name: Extract Timezone Selection
+    id: get_timezone
+    task: get_timezone_from_time_range
+    partial:
+      time_range: ${{ workflow.time_range.return }}
+
+  # ---------- Fetch (single patrol call → obs + events) ----------
+  - title: Patrol and Event Types
+    type: task-group
+    description: " "
+    tasks:
+      - name: Patrol and Event Params
+        id: er_params
+        task: set_patrols_and_patrol_events_params
+        partial:
+          client: ${{ workflow.er_client_name.return }}
+          time_range: ${{ workflow.time_range.return }}
+          include_patrol_details: true
+          raise_on_empty: false
+          truncate_to_time_range: true
+          patrols_overlap_daterange: true
+          include_null_geometry: false
+          sub_page_size: 100
+
+      - name: Prefetch Patrols
+        id: prefetch_patrols
+        task: get_patrols_from_combined_params
+        partial:
+          combined_params: ${{ workflow.er_params.return }}
+
+      - name: Get Patrol Observations
+        id: patrol_obs
+        task: get_patrol_observations_from_patrols_df_and_combined_params
+        partial:
+          patrols_df: ${{ workflow.prefetch_patrols.return }}
+          combined_params: ${{ workflow.er_params.return }}
+
+      - name: Unpack Patrol Events
+        id: patrol_events
+        task: unpack_events_from_patrols_df_and_combined_params
+        partial:
+          patrols_df: ${{ workflow.prefetch_patrols.return }}
+          combined_params: ${{ workflow.er_params.return }}
+
+  # ---------- Filter Data (shared card) ----------
+  - title: Filter Data
+    type: task-group
+    description: " "
+    tasks:
+      - name: Filters
+        id: patrol_filters
+        task: ecoscope.platform.tasks.config.set_traj_filters
+
+  - name: Split Bounding Box
+    id: bounding_box
+    task: ecoscope.platform.tasks.config.get_bounding_box
+    partial:
+      filters: ${{ workflow.patrol_filters.return }}
+
+  - name: Split Point Coordinates
+    id: filter_point_coords
+    task: ecoscope.platform.tasks.config.get_filter_point_coords
+    partial:
+      filters: ${{ workflow.patrol_filters.return }}
+
+  - name: Split Segment Filter
+    id: segment_filter
+    task: ecoscope.platform.tasks.config.get_segment_filter
+    partial:
+      filters: ${{ workflow.patrol_filters.return }}
+
+  # ---------- Group Data (dashboard groupers; default [] -> single view) ----------
+  - title: Group Data
+    type: task-group
+    description: >-
+      Configure how results are grouped (by category, temporal index or spatial
+      feature group) and split into per-group dashboard views.
+    tasks:
+      - name: Group Data
+        id: groupers
+        task: set_groupers
+
+  # Resolve spatial groupers (no-op when none configured).
+  - task: extract_spatial_grouper_feature_group_names
+    id: spatial_group_ids
+    partial:
+      groupers: ${{ workflow.groupers.return }}
+
+  - task: get_spatial_features_group
+    id: fetch_spatial_groups
+    partial:
+      client: ${{ workflow.er_client_name.return }}
+    map:
+      argnames: spatial_features_group_name
+      argvalues: ${{ workflow.spatial_group_ids.return }}
+
+  - task: resolve_spatial_feature_groups_for_spatial_groupers
+    id: resolved_groupers
+    skipif:
+      conditions:
+        - never
+    partial:
+      groupers: ${{ workflow.groupers.return }}
+      spatial_feature_groups: ${{ workflow.fetch_spatial_groups.return }}
+
+  - name: Summary Table Title
+    id: set_summary_title
+    task: set_string_var
+    partial:
+      var: "Encounter Rate Summary"
+
+  # ---------- Process Patrol Observations → Trajectories ----------
+  - title: Process Patrol Observations
+    type: task-group
+    description: "Convert patrol observations to trajectory segments and index them for grouping."
+    tasks:
+      - name: Convert Observations to Timezone
+        id: convert_obs_tz
+        task: convert_values_to_timezone
+        partial:
+          df: ${{ workflow.patrol_obs.return }}
+          timezone: ${{ workflow.get_timezone.return }}
+          columns: ["fixtime"]
+
+      - name: Remove Column Prefix (Observations)
+        id: drop_prefix_obs
+        task: drop_column_prefix
+        partial:
+          df: ${{ workflow.convert_obs_tz.return }}
+          prefix: "extra__"
+          duplicate_strategy: "suffix"
+
+      - name: Filter Patrol Observations
+        id: filter_patrol_obs
+        task: apply_reloc_coord_filter
+        partial:
+          df: ${{ workflow.drop_prefix_obs.return }}
+          bounding_box: ${{ workflow.bounding_box.return }}
+          filter_point_coords: ${{ workflow.filter_point_coords.return }}
+          roi_gdf: null
+          roi_name: null
+          reset_index: false
+
+      - name: Relocations to Trajectory
+        id: patrol_traj
+        task: relocations_to_trajectory
+        partial:
+          relocations: ${{ workflow.filter_patrol_obs.return }}
+          trajectory_segment_filter: ${{ workflow.segment_filter.return }}
+
+      - name: Remove Column Prefix (Trajectories)
+        id: drop_prefix_traj
+        task: drop_column_prefix
+        partial:
+          df: ${{ workflow.patrol_traj.return }}
+          prefix: "extra__"
+          duplicate_strategy: "suffix"
+
+      # Align the traj category column name with the events branch:
+      # events carry `patrol_type` (the value slug); trajectories carry
+      # `patrol_type__value`. Drop the traj serial-style `patrol_type` and
+      # rename (encounter-rate convention).
+      - name: Rename Trajectory Category Columns
+        id: traj_rename_cols
+        task: map_columns
+        partial:
+          df: ${{ workflow.drop_prefix_traj.return }}
+          drop_columns: ["patrol_type"]
+          retain_columns: []
+          rename_columns:
+            patrol_type__value: patrol_type
+          raise_if_not_found: false
+
+      - name: Add Temporal Index to Trajectories
+        id: traj_temporal_index
+        task: add_temporal_index
+        partial:
+          df: ${{ workflow.traj_rename_cols.return }}
+          time_col: segment_start
+          groupers: ${{ workflow.resolved_groupers.return }}
+          cast_to_datetime: true
+          format: mixed
+
+      - name: Add Spatial Index to Trajectories
+        id: traj_spatial_index
+        task: add_spatial_index
+        partial:
+          gdf: ${{ workflow.traj_temporal_index.return }}
+          groupers: ${{ workflow.resolved_groupers.return }}
+
+  # ---------- Process Patrol Events ----------
+  - title: Process Patrol Events
+    type: task-group
+    description: "Filter patrol events and index them for grouping."
+    tasks:
+      - name: Convert Events to Timezone
+        id: convert_events_tz
+        task: convert_values_to_timezone
+        partial:
+          df: ${{ workflow.patrol_events.return }}
+          timezone: ${{ workflow.get_timezone.return }}
+          columns: ["time"]
+
+      - name: Remove Column Prefix (Events)
+        id: drop_prefix_events
+        task: drop_column_prefix
+        partial:
+          df: ${{ workflow.convert_events_tz.return }}
+          prefix: "extra__"
+          duplicate_strategy: "suffix"
+
+      - name: Filter Patrol Events
+        id: filter_patrol_events
+        task: apply_reloc_coord_filter
+        partial:
+          df: ${{ workflow.drop_prefix_events.return }}
+          bounding_box: ${{ workflow.bounding_box.return }}
+          filter_point_coords: ${{ workflow.filter_point_coords.return }}
+          roi_gdf: null
+          roi_name: null
+          reset_index: true
+
+      # Events indexed on their own time so numerator and denominator cover
+      # the same window under a temporal grouper (see PRD Design Decisions).
+      - name: Add Temporal Index to Events
+        id: events_temporal_index
+        task: add_temporal_index
+        partial:
+          df: ${{ workflow.filter_patrol_events.return }}
+          time_col: time
+          groupers: ${{ workflow.resolved_groupers.return }}
+          cast_to_datetime: true
+          format: mixed
+
+      - name: Add Spatial Index to Events
+        id: events_spatial_index
+        task: add_spatial_index
+        partial:
+          gdf: ${{ workflow.events_temporal_index.return }}
+          groupers: ${{ workflow.resolved_groupers.return }}
+
+  # ---------- Combine & Split ----------
+  # concat_dataframes drops skip sentinels, so an empty events branch degrades
+  # to "0 events", not a failed run.
+  - name: Combine Trajectories and Events
+    id: combined_df
+    task: concat_dataframes
+    skipif:
+      conditions:
+        - never
+    partial:
+      dfs:
+        - ${{ workflow.traj_spatial_index.return }}
+        - ${{ workflow.events_spatial_index.return }}
+      ensure_columns:
+        - event_type
+        - patrol_id
+        - dist_meters
+        - timespan_seconds
+        - patrol_subject
+        - patrol_type
+        - patrol_serial_number
+      reset_index: true
+
+  - name: Cast Category Columns to String
+    id: combined_to_string
+    task: convert_column_values_to_string
+    partial:
+      df: ${{ workflow.combined_df.return }}
+      columns: ["patrol_serial_number", "patrol_type", "patrol_subject"]
+
+  - name: Split by Group
+    id: split_combined
+    task: split_groups
+    partial:
+      df: ${{ workflow.combined_to_string.return }}
+      groupers: ${{ workflow.resolved_groupers.return }}
+
+  # ---------- Encounter Rate Summary (one table widget) ----------
+  - title: Encounter Rate Summary
+    type: task-group
+    description: "Per-category encounter rate metrics. Choose the category to group rows by."
+    tasks:
+      - name: Aggregator
+        id: summary_groupby
+        task: set_list_of_string_vars
+
+      # Raw sums/counts per category. `count` on event_type counts only event
+      # rows; `sum` on dist/timespan sums only segment rows (NaN on the other
+      # row type is skipped by pandas).
+      - name: Summarize Encounter Stats
+        id: summary_stats
+        task: summarize_df
+        partial:
+          reset_index: true
+          groupby_cols: ${{ workflow.summary_groupby.return }}
+          summary_params:
+            - display_name: "patrol_count"
+              aggregator: nunique
+              column: patrol_id
+              decimal_places: 0
+            - display_name: "total_events"
+              aggregator: count
+              column: event_type
+              decimal_places: 0
+            - display_name: "total_dist_m"
+              aggregator: sum
+              column: dist_meters
+            - display_name: "total_time_s"
+              aggregator: sum
+              column: timespan_seconds
+        mapvalues:
+          argnames: df
+          argvalues: ${{ workflow.split_combined.return }}
+
+      # Row-wise unit conversions + ratios (no GROUP BY — rows are already
+      # per-category). NULLIF guards zero effort; those cells render empty.
+      - name: Calculate Encounter Rates
+        id: summary_rates
+        task: apply_sql_query
+        partial:
+          query: >-
+            SELECT
+              *,
+              ROUND(total_time_s / 3600.0, 1) AS "Total Patrol Hours",
+              ROUND(total_dist_m / 1000.0, 1) AS "Total Patrol Km",
+              ROUND(total_events * 3600.0 / NULLIF(total_time_s, 0), 2) AS "Events per Hour",
+              ROUND(total_events * 1000.0 / NULLIF(total_dist_m, 0), 2) AS "Events per Km"
+            FROM df
+          columns: null
+        mapvalues:
+          argnames: df
+          argvalues: ${{ workflow.summary_stats.return }}
+
+      - name: Rename Summary Columns
+        id: summary_rename
+        task: map_columns
+        partial:
+          drop_columns: ["total_dist_m", "total_time_s"]
+          retain_columns: []
+          rename_columns:
+            patrol_subject: "Patrol Subject"
+            patrol_type: "Patrol Type"
+            patrol_serial_number: "Patrol Serial Number"
+            patrol_count: "Number of Patrols"
+            total_events: "Total Events"
+          raise_if_not_found: false
+        mapvalues:
+          argnames: df
+          argvalues: ${{ workflow.summary_rates.return }}
+
+      - name: Draw Summary Table
+        id: summary_table
+        task: draw_table
+        partial:
+          columns: null
+          widget_id: ${{ workflow.set_summary_title.return }}
+          table_config:
+            enable_sorting: true
+            enable_filtering: false
+            enable_download: true
+            hide_header: false
+        mapvalues:
+          argnames: dataframe
+          argvalues: ${{ workflow.summary_rename.return }}
+
+      - name: Persist Summary Table
+        id: summary_html
+        task: persist_text
+        partial:
+          root_path: ${{ env.ECOSCOPE_WORKFLOWS_RESULTS }}
+          filename_suffix: encounter_rate_summary
+        mapvalues:
+          argnames: text
+          argvalues: ${{ workflow.summary_table.return }}
+
+      - name: Create Summary Table Widget
+        id: summary_widget
+        task: create_table_widget_single_view
+        skipif:
+          conditions:
+            - never
+        partial:
+          title: ${{ workflow.set_summary_title.return }}
+        map:
+          argnames: [view, data]
+          argvalues: ${{ workflow.summary_html.return }}
+
+      - name: Merge Summary Table Views
+        id: summary_widget_merged
+        task: merge_widget_views
+        partial:
+          widgets: ${{ workflow.summary_widget.return }}
+
+  # ---------- Dashboard ----------
+  - name: Create Dashboard
+    id: stats_dashboard
+    task: gather_dashboard
+    partial:
+      details: ${{ workflow.workflow_details.return }}
+      widgets:
+        - ${{ workflow.summary_widget_merged.return }}
+      groupers: ${{ workflow.resolved_groupers.return }}
+      time_range: ${{ workflow.time_range.return }}

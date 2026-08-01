@@ -1,16 +1,124 @@
 # Test cases for patrol_encounter_rate_stats
-# Each top-level key is a test case name. Fields per case:
-#   name: str                  - Human-readable name
-#   description: str           - What the test case covers
-#   params: dict               - Workflow parameters
-#   raises: bool               - Whether an error is expected (default: false)
-#   expected_status_code: int  - Expected HTTP status (default: 200)
 #
-# Example:
-# my-test-case:
-#   name: My Test Case
-#   description: Tests the default workflow behavior
-#   params:
-#     param_name: value
-#   raises: false
-#   expected_status_code: 200
+# All development cases run with mock_io: true against the task libraries'
+# shipped example-return fixtures — no credentials needed. The live mep_dev
+# case is added in Phase 3 (reconnect), together with the EarthRanger env
+# vars in .github/workflows/test.yml.
+
+base:
+  name: Base
+  description: Mocked IO — primary development case (no credentials needed).
+  mock_io: true
+  params:
+    workflow_details:
+      name: "Patrol Encounter Rate Stats"
+      description: "Per-category encounter rate summary table."
+    er_client_name:
+      data_source:
+        name: "er_asia"
+    time_range:
+      since: "2015-01-10T00:00:00"
+      until: "2015-02-28T23:59:59"
+      timezone:
+        label: "UTC (UTC+00:00)"
+        tzCode: "UTC"
+        name: "(UTC+00:00) UTC"
+        utc: "+00:00"
+    er_params:
+      patrol_types: ["demo_patrol"]
+      event_types: []
+    groupers:
+      groupers: []
+    summary_groupby:
+      vars: ["patrol_subject"]
+
+grouped:
+  name: Grouped
+  description: >-
+    Mocked IO — value grouper (patrol serial number) plus monthly temporal
+    grouper; hits both temporal-index tasks and the string casts.
+  mock_io: true
+  params:
+    workflow_details:
+      name: "Patrol Encounter Rate Stats"
+      description: "Per-category encounter rate summary table."
+    er_client_name:
+      data_source:
+        name: "er_asia"
+    time_range:
+      since: "2015-01-10T00:00:00"
+      until: "2015-02-28T23:59:59"
+      timezone:
+        label: "UTC (UTC+00:00)"
+        tzCode: "UTC"
+        name: "(UTC+00:00) UTC"
+        utc: "+00:00"
+    er_params:
+      patrol_types: ["demo_patrol"]
+      event_types: []
+    groupers:
+      groupers:
+        - index_name: "patrol_serial_number"
+        - temporal_index: "%B"
+    summary_groupby:
+      vars: ["patrol_subject"]
+
+spatial-grouped:
+  name: Spatial Grouped
+  description: >-
+    Mocked IO — spatial grouper: the mock get_spatial_features_group fixture
+    returns the "SpatialGrouperTest" group (Central/East/West regions),
+    hitting the resolver tasks and add_spatial_index on both branches.
+  mock_io: true
+  params:
+    workflow_details:
+      name: "Patrol Encounter Rate Stats"
+      description: "Per-category encounter rate summary table."
+    er_client_name:
+      data_source:
+        name: "er_asia"
+    time_range:
+      since: "2015-01-10T00:00:00"
+      until: "2015-02-28T23:59:59"
+      timezone:
+        label: "UTC (UTC+00:00)"
+        tzCode: "UTC"
+        name: "(UTC+00:00) UTC"
+        utc: "+00:00"
+    er_params:
+      patrol_types: ["demo_patrol"]
+      event_types: []
+    groupers:
+      groupers:
+        - spatial_index_name: "SpatialGrouperTest"
+    summary_groupby:
+      vars: ["patrol_subject"]
+
+by-patrol-type:
+  name: By Patrol Type
+  description: >-
+    Mocked IO — multi-column Aggregator [patrol_subject, patrol_type];
+    exercises multi-column grouping and header renames.
+  mock_io: true
+  params:
+    workflow_details:
+      name: "Patrol Encounter Rate Stats"
+      description: "Per-category encounter rate summary table."
+    er_client_name:
+      data_source:
+        name: "er_asia"
+    time_range:
+      since: "2015-01-10T00:00:00"
+      until: "2015-02-28T23:59:59"
+      timezone:
+        label: "UTC (UTC+00:00)"
+        tzCode: "UTC"
+        name: "(UTC+00:00) UTC"
+        utc: "+00:00"
+    er_params:
+      patrol_types: ["demo_patrol"]
+      event_types: []
+    groupers:
+      groupers: []
+    summary_groupby:
+      vars: ["patrol_subject", "patrol_type"]
