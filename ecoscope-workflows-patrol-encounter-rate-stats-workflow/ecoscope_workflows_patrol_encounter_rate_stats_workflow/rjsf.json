@@ -303,7 +303,7 @@
               "properties": {
                 "count_or_sum": {
                   "type": "string",
-                  "title": "Measure Events By",
+                  "title": "Measure Encounters By",
                   "default": "Count",
                   "oneOf": [
                     {
@@ -331,7 +331,7 @@
                       "column": {
                         "type": "string",
                         "title": "Event Field to Sum",
-                        "description": "Event details field whose values are totaled for the Event Sum metrics (Total Event Sum and the Event Sum rates), using the field title shown in EarthRanger (for example \"Number of Animals\")."
+                        "description": "Event details field whose values are totaled for the Encounter metrics (Total Encounter and the Encounters per Duration/Distance/Patrol rates), using the field title shown in EarthRanger (for example \"Number of Animals\"). Total Events always counts events."
                       }
                     }
                   }
@@ -341,14 +341,14 @@
             "metrics": {
               "default": [
                 {
-                  "metric": "total_event_sum"
+                  "metric": "total_encounter"
                 },
                 {
                   "metric": "total_duration",
                   "unit": "h"
                 },
                 {
-                  "metric": "event_sum_per_duration",
+                  "metric": "encounters_per_duration",
                   "unit": "h"
                 },
                 {
@@ -356,7 +356,7 @@
                   "unit": "km"
                 },
                 {
-                  "metric": "event_sum_per_distance",
+                  "metric": "encounters_per_distance",
                   "unit": "km"
                 }
               ],
@@ -366,17 +366,15 @@
                     "area_covered_merged": "#/$defs/MergedAreaCoveredMetric",
                     "area_covered_unmerged": "#/$defs/UnmergedAreaCoveredMetric",
                     "custom": "#/$defs/CustomMetric",
-                    "event_sum_per_distance": "#/$defs/EventSumPerDistanceMetric",
-                    "event_sum_per_duration": "#/$defs/EventSumPerDurationMetric",
-                    "events_per_distance": "#/$defs/EventsPerDistanceMetric",
-                    "events_per_duration": "#/$defs/EventsPerDurationMetric",
-                    "events_per_patrol": "#/$defs/EventsPerPatrolMetric",
-                    "events_per_patrol_day": "#/$defs/EventsPerPatrolDayMetric",
+                    "encounters_per_distance": "#/$defs/EncountersPerDistanceMetric",
+                    "encounters_per_duration": "#/$defs/EncountersPerDurationMetric",
+                    "encounters_per_patrol": "#/$defs/EncountersPerPatrolMetric",
+                    "encounters_per_patrol_day": "#/$defs/EncountersPerPatrolDayMetric",
                     "patrol_count": "#/$defs/PatrolCountMetric",
                     "patrol_days": "#/$defs/PatrolDaysMetric",
                     "total_distance": "#/$defs/TotalDistanceMetric",
                     "total_duration": "#/$defs/TotalDurationMetric",
-                    "total_event_sum": "#/$defs/TotalEventSumMetric",
+                    "total_encounter": "#/$defs/TotalEncounterMetric",
                     "total_events": "#/$defs/TotalEventsMetric"
                   },
                   "propertyName": "metric"
@@ -392,22 +390,16 @@
                     "$ref": "#/$defs/CustomMetric"
                   },
                   {
-                    "$ref": "#/$defs/EventSumPerDistanceMetric"
+                    "$ref": "#/$defs/EncountersPerDistanceMetric"
                   },
                   {
-                    "$ref": "#/$defs/EventSumPerDurationMetric"
+                    "$ref": "#/$defs/EncountersPerDurationMetric"
                   },
                   {
-                    "$ref": "#/$defs/EventsPerDistanceMetric"
+                    "$ref": "#/$defs/EncountersPerPatrolMetric"
                   },
                   {
-                    "$ref": "#/$defs/EventsPerDurationMetric"
-                  },
-                  {
-                    "$ref": "#/$defs/EventsPerPatrolMetric"
-                  },
-                  {
-                    "$ref": "#/$defs/EventsPerPatrolDayMetric"
+                    "$ref": "#/$defs/EncountersPerPatrolDayMetric"
                   },
                   {
                     "$ref": "#/$defs/PatrolCountMetric"
@@ -422,7 +414,7 @@
                     "$ref": "#/$defs/TotalDurationMetric"
                   },
                   {
-                    "$ref": "#/$defs/TotalEventSumMetric"
+                    "$ref": "#/$defs/TotalEncounterMetric"
                   },
                   {
                     "$ref": "#/$defs/TotalEventsMetric"
@@ -826,13 +818,13 @@
       "title": "Custom",
       "type": "object"
     },
-    "EventSumPerDistanceMetric": {
+    "EncountersPerDistanceMetric": {
       "properties": {
         "metric": {
-          "const": "event_sum_per_distance",
-          "default": "event_sum_per_distance",
+          "const": "encounters_per_distance",
+          "default": "encounters_per_distance",
           "enum": [
-            "event_sum_per_distance"
+            "encounters_per_distance"
           ],
           "title": "Metric",
           "type": "string"
@@ -859,16 +851,16 @@
           "type": "string"
         }
       },
-      "title": "Event Sum per Distance",
+      "title": "Encounters per Distance",
       "type": "object"
     },
-    "EventSumPerDurationMetric": {
+    "EncountersPerDurationMetric": {
       "properties": {
         "metric": {
-          "const": "event_sum_per_duration",
-          "default": "event_sum_per_duration",
+          "const": "encounters_per_duration",
+          "default": "encounters_per_duration",
           "enum": [
-            "event_sum_per_duration"
+            "encounters_per_duration"
           ],
           "title": "Metric",
           "type": "string"
@@ -895,98 +887,50 @@
           "type": "string"
         }
       },
-      "title": "Event Sum per Duration",
+      "title": "Encounters per Duration",
       "type": "object"
     },
-    "EventsPerDistanceMetric": {
-      "properties": {
-        "metric": {
-          "const": "events_per_distance",
-          "default": "events_per_distance",
-          "enum": [
-            "events_per_distance"
-          ],
-          "title": "Metric",
-          "type": "string"
-        },
-        "unit": {
-          "default": "km",
-          "oneOf": [
-            {
-              "const": "km",
-              "title": "Kilometers (km)"
-            },
-            {
-              "const": "m",
-              "title": "Meters (m)"
-            }
-          ],
-          "title": "Unit",
-          "type": "string"
-        }
-      },
-      "title": "Events per Distance",
-      "type": "object"
-    },
-    "EventsPerDurationMetric": {
-      "properties": {
-        "metric": {
-          "const": "events_per_duration",
-          "default": "events_per_duration",
-          "enum": [
-            "events_per_duration"
-          ],
-          "title": "Metric",
-          "type": "string"
-        },
-        "unit": {
-          "default": "h",
-          "oneOf": [
-            {
-              "const": "h",
-              "title": "Hours (h)"
-            },
-            {
-              "const": "d",
-              "title": "Days (d)"
-            }
-          ],
-          "title": "Unit",
-          "type": "string"
-        }
-      },
-      "title": "Events per Duration",
-      "type": "object"
-    },
-    "EventsPerPatrolDayMetric": {
+    "EncountersPerPatrolDayMetric": {
       "description": "Rate against patrol days \u2014 distinct calendar days with patrol movement\n(nunique segment_start_date, matching PatrolDaysMetric).",
       "properties": {
         "metric": {
-          "const": "events_per_patrol_day",
-          "default": "events_per_patrol_day",
+          "const": "encounters_per_patrol_day",
+          "default": "encounters_per_patrol_day",
           "enum": [
-            "events_per_patrol_day"
+            "encounters_per_patrol_day"
           ],
           "title": "Metric",
           "type": "string"
+        },
+        "aggregate_column": {
+          "default": "",
+          "description": "Event details field whose values are totaled for this metric, using the field title shown in EarthRanger (for example \"Number of Animals\"). Leave blank to use the task-level Event Field to Sum.",
+          "title": "Event Field to Sum",
+          "type": "string"
         }
       },
-      "title": "Events per Patrol Day",
+      "title": "Encounters per Patrol Day",
       "type": "object"
     },
-    "EventsPerPatrolMetric": {
+    "EncountersPerPatrolMetric": {
       "properties": {
         "metric": {
-          "const": "events_per_patrol",
-          "default": "events_per_patrol",
+          "const": "encounters_per_patrol",
+          "default": "encounters_per_patrol",
           "enum": [
-            "events_per_patrol"
+            "encounters_per_patrol"
           ],
           "title": "Metric",
           "type": "string"
+        },
+        "aggregate_column": {
+          "default": "",
+          "description": "Event details field whose values are totaled for this metric, using the field title shown in EarthRanger (for example \"Number of Animals\"). Leave blank to use the task-level Event Field to Sum.",
+          "title": "Event Field to Sum",
+          "type": "string"
         }
       },
-      "title": "Events per Patrol",
+      "title": "Encounters per Patrol",
       "type": "object"
     },
     "MergedAreaCoveredMetric": {
@@ -1101,13 +1045,13 @@
       "title": "Total Duration",
       "type": "object"
     },
-    "TotalEventSumMetric": {
+    "TotalEncounterMetric": {
       "properties": {
         "metric": {
-          "const": "total_event_sum",
-          "default": "total_event_sum",
+          "const": "total_encounter",
+          "default": "total_encounter",
           "enum": [
-            "total_event_sum"
+            "total_encounter"
           ],
           "title": "Metric",
           "type": "string"
@@ -1119,7 +1063,7 @@
           "type": "string"
         }
       },
-      "title": "Total Event Sum",
+      "title": "Total Encounter",
       "type": "object"
     },
     "TotalEventsMetric": {
@@ -1216,28 +1160,12 @@
         ],
         "aggregation": {
           "count_or_sum": {
-            "ui:help": "Number of Events counts patrol events; Sum of an Event Field totals a chosen event details field (for example Number of Animals) instead. The Event Sum metrics below follow this choice."
+            "ui:help": "Number of Events counts patrol events; Sum of an Event Field totals a chosen event details field (for example Number of Animals) instead. The Encounter metrics below follow this choice; Total Events always counts events."
           }
         },
         "metrics": {
           "items": {
             "oneOf": [
-              {
-                "ui:options": {
-                  "label": false
-                },
-                "metric": {
-                  "ui:widget": "hidden"
-                }
-              },
-              {
-                "ui:options": {
-                  "label": false
-                },
-                "metric": {
-                  "ui:widget": "hidden"
-                }
-              },
               {
                 "ui:options": {
                   "label": false
