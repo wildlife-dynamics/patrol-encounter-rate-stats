@@ -298,7 +298,7 @@
           "properties": {
             "aggregation": {
               "default": null,
-              "title": "",
+              "title": "Measure Encounters By",
               "type": "object",
               "properties": {
                 "count_or_sum": {
@@ -344,16 +344,8 @@
                   "metric": "total_encounter"
                 },
                 {
-                  "metric": "total_duration",
-                  "unit": "h"
-                },
-                {
                   "metric": "encounters_per_duration",
                   "unit": "h"
-                },
-                {
-                  "metric": "total_distance",
-                  "unit": "km"
                 },
                 {
                   "metric": "encounters_per_distance",
@@ -1160,6 +1152,9 @@
         ],
         "aggregation": {
           "count_or_sum": {
+            "ui:options": {
+              "label": false
+            },
             "ui:help": "Number of Events counts patrol events; Sum of an Event Field totals a chosen event details field (for example Number of Animals) instead. The Encounter metrics below follow this choice; Total Events always counts events."
           }
         },
@@ -1196,6 +1191,9 @@
                 },
                 "metric": {
                   "ui:widget": "hidden"
+                },
+                "aggregate_column": {
+                  "ui:widget": "hidden"
                 }
               },
               {
@@ -1203,6 +1201,31 @@
                   "label": false
                 },
                 "metric": {
+                  "ui:widget": "hidden"
+                },
+                "aggregate_column": {
+                  "ui:widget": "hidden"
+                }
+              },
+              {
+                "ui:options": {
+                  "label": false
+                },
+                "metric": {
+                  "ui:widget": "hidden"
+                },
+                "aggregate_column": {
+                  "ui:widget": "hidden"
+                }
+              },
+              {
+                "ui:options": {
+                  "label": false
+                },
+                "metric": {
+                  "ui:widget": "hidden"
+                },
+                "aggregate_column": {
                   "ui:widget": "hidden"
                 }
               },
@@ -1244,21 +1267,8 @@
                 },
                 "metric": {
                   "ui:widget": "hidden"
-                }
-              },
-              {
-                "ui:options": {
-                  "label": false
                 },
-                "metric": {
-                  "ui:widget": "hidden"
-                }
-              },
-              {
-                "ui:options": {
-                  "label": false
-                },
-                "metric": {
+                "aggregate_column": {
                   "ui:widget": "hidden"
                 }
               },

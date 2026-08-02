@@ -88,6 +88,16 @@ rjsf-overrides:
           type: spatial_feature_group
           depends_on: properties.er_client_name.properties.data_source.properties.name
     "Encounter Rate Summary.properties.summary_metrics.title": ""
+    # Promote the aggregation heading to the object title (renders via
+    # TitleFieldTemplate at the same size as the Aggregator array title); the
+    # inner select's own small label is blanked in uiSchema below.
+    "Encounter Rate Summary.properties.summary_metrics.properties.aggregation.title": "Measure Encounters By"
+    "Encounter Rate Summary.properties.summary_metrics.properties.metrics.default":
+      - metric: "total_encounter"
+      - metric: "encounters_per_duration"
+        unit: "h"
+      - metric: "encounters_per_distance"
+        unit: "km"
 
     # --- Filter Data card ---
     "Filter Data.properties.patrol_filters.title": ""
@@ -127,6 +137,8 @@ rjsf-overrides:
     # "Sum of an Event Field" mode.
     "Encounter Rate Summary.summary_metrics.aggregation":
       count_or_sum:
+        ui:options:
+          label: false   # heading comes from the aggregation object title
         ui:help: >-
           Number of Events counts patrol events; Sum of an Event Field totals a
           chosen event details field (for example Number of Animals) instead.
@@ -137,24 +149,26 @@ rjsf-overrides:
     # match EncounterRateMetric in ecoscope _patrol_summary.py).
     # ui:options.label false hides the branch heading (the selector already
     # names it); the hidden metric widget hides the discriminator dropdown
-    # (auto-filled from the branch default). Union order: area_covered_merged,
-    # area_covered_unmerged, custom, encounters_per_distance,
-    # encounters_per_duration, encounters_per_patrol,
+    # (auto-filled from the branch default). Encounter branches additionally
+    # hide their per-metric aggregate_column override — left blank it falls
+    # back to the task-level Event Field to Sum under Measure Encounters By.
+    # Union order: area_covered_merged, area_covered_unmerged, custom,
+    # encounters_per_distance, encounters_per_duration, encounters_per_patrol,
     # encounters_per_patrol_day, patrol_count, patrol_days, total_distance,
     # total_duration, total_encounter, total_events.
     "Encounter Rate Summary.summary_metrics.metrics.items.oneOf":
       - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
       - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
       - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
+      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}, "aggregate_column": {"ui:widget": "hidden"}}
+      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}, "aggregate_column": {"ui:widget": "hidden"}}
+      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}, "aggregate_column": {"ui:widget": "hidden"}}
+      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}, "aggregate_column": {"ui:widget": "hidden"}}
       - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
       - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
       - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
       - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
-      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
-      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
-      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
-      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
-      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
+      - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}, "aggregate_column": {"ui:widget": "hidden"}}
       - {"ui:options": {"label": false}, "metric": {"ui:widget": "hidden"}}
 
 task-instance-defaults:
