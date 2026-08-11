@@ -339,7 +339,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/cb/41/247627c8b9fef5c605d00546b85771a8fe42975b9616a557cead5468789b/datashader-0.19.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8b/7c/2e5dcf53909deddd0bf38cbe277ad9806be038276b1c6c436561b4d9b2e2/dateparser-1.4.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/a7/39/ce46ee84779ef19d88fd028fc786a6dcc68b73ace33c31997aeda0dfecdc/earthengine_api-1.7.12-py3-none-any.whl
-      - pypi: git+https://github.com/wildlife-dynamics/ecoscope-earthranger-io-core.git#f31a1f1a06476135291ccb9ca66dee28485706bf
+      - pypi: git+https://github.com/wildlife-dynamics/ecoscope-earthranger-io-core.git#2b3f9fa3afaf3aa5e0811953a83807cca8e03736
       - pypi: git+https://github.com/PADAS/er-client#4d61b450d471c7161c64d2f48dfa735a52a6bcf9
       - pypi: https://files.pythonhosted.org/packages/e4/72/42e900510195b23a56bde950d26a51f8b723846bfcaa0286e90287f0422b/fastapi-0.135.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/66/ec/ffd43f0671a5c7d46776afe4a3d15d21a04206339df3054ef676b3c36fbf/geoarrow_c-0.3.1-cp312-cp312-macosx_11_0_arm64.whl
@@ -1829,8 +1829,8 @@ packages:
   requires_python: '>=3.7'
 - pypi: /Users/yunwu/MEP/wt-tasks/ecoscope
   name: ecoscope
-  version: 2.17.6.dev1+g713931d
-  sha256: 95f71a7e116c3b5525352720d0a2a1b49ae137b796240de3e9a62c8ad7becf88
+  version: 2.18.1.dev5+gdde5d4b
+  sha256: d274b0227e935f63a8db3cb7f5840095e2f19ce2e180e2810fde93c6d0386983
   requires_dist:
   - backoff>=2
   - earthengine-api>=1.4,<1.7.13
@@ -1868,7 +1868,7 @@ packages:
   - cloudpathlib[gs] ; extra == 'platform'
   - wt-registry>=0.2.0,<0.3.0 ; extra == 'platform'
   - wt-task>=0.1.0,<0.2.0 ; extra == 'platform'
-  - ecoscope-earthranger-io-core @ git+https://github.com/wildlife-dynamics/ecoscope-earthranger-io-core.git@v0.0.22 ; extra == 'platform'
+  - ecoscope-earthranger-io-core @ git+https://github.com/wildlife-dynamics/ecoscope-earthranger-io-core.git@v0.0.24 ; extra == 'platform'
   - fastapi ; extra == 'platform'
   - pyarrow>=20 ; extra == 'platform'
   - geoarrow-pyarrow>=0.2.0,<0.3 ; extra == 'platform'
@@ -1880,9 +1880,9 @@ packages:
   - pydata-sphinx-theme<0.17.0 ; extra == 'docs'
   - sphinx ; extra == 'docs'
   - sphinx-autoapi ; extra == 'docs'
-- pypi: git+https://github.com/wildlife-dynamics/ecoscope-earthranger-io-core.git#f31a1f1a06476135291ccb9ca66dee28485706bf
+- pypi: git+https://github.com/wildlife-dynamics/ecoscope-earthranger-io-core.git#2b3f9fa3afaf3aa5e0811953a83807cca8e03736
   name: ecoscope-earthranger-io-core
-  version: 0.0.22
+  version: 0.0.24
   requires_dist:
   - geoarrow-pyarrow>=0.2.0,<0.3
   - google-auth>=2.0.0,<3
