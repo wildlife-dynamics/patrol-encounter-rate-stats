@@ -268,3 +268,102 @@ metric-subset:
           unit: "km"
         - metric: "encounters_per_patrol"
         - metric: "encounters_per_patrol_day"
+
+serial-aggregator:
+  name: Serial Number Aggregator
+  description: >-
+    Mocked IO — Aggregator = Patrol Serial Number, completing coverage of the
+    Category presets (patrol_type in base, patrol_subject in metric-subset,
+    both combined in by-patrol-type).
+  mock_io: true
+  params:
+    workflow_details:
+      name: "Patrol Encounter Rate Stats"
+      description: "Per-category encounter rate summary table."
+    er_client_name:
+      data_source:
+        name: "er_asia"
+    time_range:
+      since: "2015-01-10T00:00:00"
+      until: "2015-02-28T23:59:59"
+      timezone:
+        label: "UTC (UTC+00:00)"
+        tzCode: "UTC"
+        name: "(UTC+00:00) UTC"
+        utc: "+00:00"
+    er_params:
+      patrol_types: ["demo_patrol"]
+      event_types: []
+    groupers:
+      groupers: []
+    summary_groupers:
+      groupers:
+        - index_name: "patrol_serial_number"
+
+calendar-aggregators:
+  name: Calendar Aggregators
+  description: >-
+    Mocked IO — multi-level temporal Aggregator [Year %Y, Year and Month
+    %Y-%m, Date %Y-%m-%d]: together with month-aggregator (%B) this covers
+    the calendar-scale Time options, plus multi-level temporal indexing and
+    the per-format header renames.
+  mock_io: true
+  params:
+    workflow_details:
+      name: "Patrol Encounter Rate Stats"
+      description: "Per-category encounter rate summary table."
+    er_client_name:
+      data_source:
+        name: "er_asia"
+    time_range:
+      since: "2015-01-10T00:00:00"
+      until: "2015-02-28T23:59:59"
+      timezone:
+        label: "UTC (UTC+00:00)"
+        tzCode: "UTC"
+        name: "(UTC+00:00) UTC"
+        utc: "+00:00"
+    er_params:
+      patrol_types: ["demo_patrol"]
+      event_types: []
+    groupers:
+      groupers: []
+    summary_groupers:
+      groupers:
+        - temporal_index: "%Y"
+        - temporal_index: "%Y-%m"
+        - temporal_index: "%Y-%m-%d"
+
+subday-aggregators:
+  name: Sub-day Aggregators
+  description: >-
+    Mocked IO — multi-level temporal Aggregator [Day of the year %j, Day of
+    the month %d, Day of the week %A, Hour %H]: covers the remaining sub-day
+    Time options and their header renames in one run.
+  mock_io: true
+  params:
+    workflow_details:
+      name: "Patrol Encounter Rate Stats"
+      description: "Per-category encounter rate summary table."
+    er_client_name:
+      data_source:
+        name: "er_asia"
+    time_range:
+      since: "2015-01-10T00:00:00"
+      until: "2015-02-28T23:59:59"
+      timezone:
+        label: "UTC (UTC+00:00)"
+        tzCode: "UTC"
+        name: "(UTC+00:00) UTC"
+        utc: "+00:00"
+    er_params:
+      patrol_types: ["demo_patrol"]
+      event_types: []
+    groupers:
+      groupers: []
+    summary_groupers:
+      groupers:
+        - temporal_index: "%j"
+        - temporal_index: "%d"
+        - temporal_index: "%A"
+        - temporal_index: "%H"
