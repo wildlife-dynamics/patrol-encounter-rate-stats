@@ -1,9 +1,20 @@
 # Test cases for patrol_encounter_rate_stats
 #
 # All development cases run with mock_io: true against the task libraries'
-# shipped example-return fixtures — no credentials needed. The live mep_dev
-# case is added in Phase 3 (reconnect), together with the EarthRanger env
-# vars in .github/workflows/test.yml.
+# shipped example-return fixtures — no credentials needed. The mep-dev case
+# runs live against EarthRanger and needs the
+# ECOSCOPE_WORKFLOWS__CONNECTIONS__EARTHRANGER__MEP_DEV__* env vars (added to
+# .github/workflows/test.yml at publish).
+#
+# Coverage matrix (every Aggregator dropdown option appears at least once):
+#   Category presets: patrol_type (base, by-patrol-type, mep-dev),
+#     patrol_subject (zero-events, by-patrol-type),
+#     patrol_serial_number (metric-subset)
+#   Time formats: %B (grouped), %Y / %Y-%m / %Y-%m-%d (calendar-aggregators),
+#     %j / %d / %A / %H (subday-aggregators)
+#   Spatial: both the Group Data and Aggregator resolver chains (spatial)
+#   Idempotency guards: temporal (grouped: %B on both sides),
+#     spatial (spatial: same group on both sides)
 
 base:
   name: Base
@@ -39,7 +50,11 @@ grouped:
   name: Grouped
   description: >-
     Mocked IO — value grouper (patrol serial number) plus monthly temporal
-    grouper; hits both temporal-index tasks and the string casts.
+    grouper in Group Data, with Month (%B) ALSO as the Aggregator: hits both
+    temporal-index tasks, the string casts, the TemporalGrouper_%B -> "Month"
+    header rename, and the add_temporal_index idempotency guard (the %B index
+    level added by the Group Data pass must not be re-added by the
+    aggregator pass).
   mock_io: true
   params:
     workflow_details:
@@ -65,14 +80,16 @@ grouped:
         - temporal_index: "%B"
     summary_groupers:
       groupers:
-        - index_name: "patrol_subject"
+        - temporal_index: "%B"
 
-spatial-grouped:
-  name: Spatial Grouped
+spatial:
+  name: Spatial
   description: >-
-    Mocked IO — spatial grouper: the mock get_spatial_features_group fixture
-    returns the "SpatialGrouperTest" group (Central/East/West regions),
-    hitting the resolver tasks and add_spatial_index on both branches.
+    Mocked IO — spatial grouper on BOTH sides: Group Data and the Aggregator
+    each resolve the mock "SpatialGrouperTest" group (Central/East/West),
+    exercising both independent resolver chains (extract -> fetch -> resolve),
+    add_spatial_index on both branches, and the add_spatial_index idempotency
+    guard (the shared index level must not be re-added by the second pass).
   mock_io: true
   params:
     workflow_details:
@@ -97,7 +114,7 @@ spatial-grouped:
         - spatial_index_name: "SpatialGrouperTest"
     summary_groupers:
       groupers:
-        - index_name: "patrol_subject"
+        - spatial_index_name: "SpatialGrouperTest"
 
 zero-events:
   name: Zero Events
@@ -105,7 +122,8 @@ zero-events:
     Mocked IO — event_types filter matches nothing, so the events branch
     empties and skips; concat_dataframes drops the skip sentinel and
     ensure_columns keeps the summary computable: the table must still render
-    with Total Events = 0 and effort columns populated (AC 5).
+    with Total Events = 0 and effort columns populated (AC 5). Aggregator =
+    Patrol Subject.
   mock_io: true
   params:
     workflow_details:
@@ -162,68 +180,6 @@ by-patrol-type:
         - index_name: "patrol_subject"
         - index_name: "patrol_type"
 
-month-aggregator:
-  name: Month Aggregator
-  description: >-
-    Mocked IO — temporal Aggregator (Month): exercises the second-pass
-    add_temporal_index on both branches and the TemporalGrouper_%B -> "Month"
-    header rename, with no Group Data groupers configured.
-  mock_io: true
-  params:
-    workflow_details:
-      name: "Patrol Encounter Rate Stats"
-      description: "Per-category encounter rate summary table."
-    er_client_name:
-      data_source:
-        name: "er_asia"
-    time_range:
-      since: "2015-01-10T00:00:00"
-      until: "2015-02-28T23:59:59"
-      timezone:
-        label: "UTC (UTC+00:00)"
-        tzCode: "UTC"
-        name: "(UTC+00:00) UTC"
-        utc: "+00:00"
-    er_params:
-      patrol_types: ["demo_patrol"]
-      event_types: []
-    groupers:
-      groupers: []
-    summary_groupers:
-      groupers:
-        - temporal_index: "%B"
-
-spatial-aggregator:
-  name: Spatial Aggregator
-  description: >-
-    Mocked IO — spatial Aggregator: exercises the summary-side resolver chain
-    (extract -> fetch -> resolve) and second-pass add_spatial_index on both
-    branches, independent of the Group Data spatial chain.
-  mock_io: true
-  params:
-    workflow_details:
-      name: "Patrol Encounter Rate Stats"
-      description: "Per-category encounter rate summary table."
-    er_client_name:
-      data_source:
-        name: "er_asia"
-    time_range:
-      since: "2015-01-10T00:00:00"
-      until: "2015-02-28T23:59:59"
-      timezone:
-        label: "UTC (UTC+00:00)"
-        tzCode: "UTC"
-        name: "(UTC+00:00) UTC"
-        utc: "+00:00"
-    er_params:
-      patrol_types: ["demo_patrol"]
-      event_types: []
-    groupers:
-      groupers: []
-    summary_groupers:
-      groupers:
-        - spatial_index_name: "SpatialGrouperTest"
-
 metric-subset:
   name: Metric Subset
   description: >-
@@ -231,50 +187,8 @@ metric-subset:
     rate per day), patrol presets (patrol count / patrol days), and the
     per-patrol / per-patrol-day rates, exercising
     set_encounter_rate_metrics -> summarize_df wiring (preset order defines
-    column order).
-  mock_io: true
-  params:
-    workflow_details:
-      name: "Patrol Encounter Rate Stats"
-      description: "Per-category encounter rate summary table."
-    er_client_name:
-      data_source:
-        name: "er_asia"
-    time_range:
-      since: "2015-01-10T00:00:00"
-      until: "2015-02-28T23:59:59"
-      timezone:
-        label: "UTC (UTC+00:00)"
-        tzCode: "UTC"
-        name: "(UTC+00:00) UTC"
-        utc: "+00:00"
-    er_params:
-      patrol_types: ["demo_patrol"]
-      event_types: []
-    groupers:
-      groupers: []
-    summary_groupers:
-      groupers:
-        - index_name: "patrol_subject"
-    summary_metrics:
-      metrics:
-        - metric: "patrol_count"
-        - metric: "patrol_days"
-        - metric: "total_distance"
-          unit: "m"
-        - metric: "encounters_per_duration"
-          unit: "d"
-        - metric: "encounters_per_distance"
-          unit: "km"
-        - metric: "encounters_per_patrol"
-        - metric: "encounters_per_patrol_day"
-
-serial-aggregator:
-  name: Serial Number Aggregator
-  description: >-
-    Mocked IO — Aggregator = Patrol Serial Number, completing coverage of the
-    Category presets (patrol_type in base, patrol_subject in metric-subset,
-    both combined in by-patrol-type).
+    column order). Aggregator = Patrol Serial Number, completing the
+    Category presets.
   mock_io: true
   params:
     workflow_details:
@@ -299,14 +213,26 @@ serial-aggregator:
     summary_groupers:
       groupers:
         - index_name: "patrol_serial_number"
+    summary_metrics:
+      metrics:
+        - metric: "patrol_count"
+        - metric: "patrol_days"
+        - metric: "total_distance"
+          unit: "m"
+        - metric: "encounters_per_duration"
+          unit: "d"
+        - metric: "encounters_per_distance"
+          unit: "km"
+        - metric: "encounters_per_patrol"
+        - metric: "encounters_per_patrol_day"
 
 calendar-aggregators:
   name: Calendar Aggregators
   description: >-
     Mocked IO — multi-level temporal Aggregator [Year %Y, Year and Month
-    %Y-%m, Date %Y-%m-%d]: together with month-aggregator (%B) this covers
-    the calendar-scale Time options, plus multi-level temporal indexing and
-    the per-format header renames.
+    %Y-%m, Date %Y-%m-%d]: together with grouped (%B) this covers the
+    calendar-scale Time options, plus multi-level temporal indexing and the
+    per-format header renames.
   mock_io: true
   params:
     workflow_details:
@@ -367,3 +293,36 @@ subday-aggregators:
         - temporal_index: "%d"
         - temporal_index: "%A"
         - temporal_index: "%H"
+
+mep-dev:
+  name: MEP Dev
+  description: >-
+    Live EarthRanger (mep-dev), 10 Jan - 28 Feb 2015 seeded ecoscope_patrol
+    data (same window as patrol-effort-table's live case); form-default
+    Aggregator (Patrol Type) and default metrics. Requires the MEP_DEV
+    EarthRanger connection env vars.
+  mock_io: false
+  params:
+    workflow_details:
+      name: "Patrol Encounter Rate Stats"
+      description: "Per-category encounter rate summary table."
+    er_client_name:
+      data_source:
+        name: "mep_dev"
+    time_range:
+      since: "2015-01-10T00:00:00"
+      until: "2015-02-28T23:59:59"
+      timezone:
+        label: "Africa/Nairobi (UTC+03:00)"
+        tzCode: "Africa/Nairobi"
+        name: "(UTC+03:00) Nairobi"
+        utc: "+03:00"
+    er_params:
+      patrol_types: ["ecoscope_patrol"]
+      event_types: []
+      status: ["done"]
+    groupers:
+      groupers: []
+    summary_groupers:
+      groupers:
+        - index_name: "patrol_type"
