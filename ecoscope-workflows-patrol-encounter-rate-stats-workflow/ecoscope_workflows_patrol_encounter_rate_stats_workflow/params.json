@@ -233,7 +233,7 @@
       },
       "type": "object",
       "required": [],
-      "title": "Aggregator"
+      "title": "Summarize by"
     },
     "summary_metrics": {
       "additionalProperties": false,
@@ -245,7 +245,7 @@
           "properties": {
             "count_or_sum": {
               "type": "string",
-              "title": "Measure Encounters By",
+              "title": "Measure Events By",
               "default": "Count",
               "oneOf": [
                 {
@@ -273,7 +273,7 @@
                   "column": {
                     "type": "string",
                     "title": "Event Field to Sum",
-                    "description": "Event details field whose values are totaled for the Encounter metrics (Total Encounter and the Encounters per Duration/Distance/Patrol rates), using the field title shown in EarthRanger (for example \"Number of Animals\"). Total Events always counts events."
+                    "description": "Event details field whose values are totaled, using the field title shown in EarthRanger (for example \"Number of Animals\")."
                   }
                 }
               }
@@ -992,7 +992,7 @@
           "type": "string"
         }
       },
-      "title": "Total Encounter",
+      "title": "Total Encounters",
       "type": "object"
     },
     "TotalEventsMetric": {
