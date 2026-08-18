@@ -43,14 +43,14 @@ rjsf-overrides:
           type: spatial_feature_group
           depends_on: properties.er_client_name.properties.data_source.properties.name
 
-    # --- Encounter Rate Summary: Aggregator (groupers list) + Metrics ---
+    # --- Encounter Rate Summary: Summarize by (groupers list) + Metrics ---
     "Encounter Rate Summary.properties.summary_groupers.title": ""
-    "Encounter Rate Summary.properties.summary_groupers.properties.groupers.title": "Aggregator"
+    "Encounter Rate Summary.properties.summary_groupers.properties.groupers.title": "Summarize by"
     "Encounter Rate Summary.properties.summary_groupers.properties.groupers.description": >-
       Group summary table rows by category, time period or spatial feature
-      group — each aggregator adds a grouping column within the same dashboard
+      group — each entry adds a grouping column within the same dashboard
       view. Leave empty for a single overall row.
-    "Encounter Rate Summary.properties.summary_groupers.properties.groupers.items.title": "Aggregator"
+    "Encounter Rate Summary.properties.summary_groupers.properties.groupers.items.title": "Summarize by"
     "Encounter Rate Summary.properties.summary_groupers.properties.groupers.default":
       - index_name: "patrol_type"
     "Encounter Rate Summary.properties.summary_groupers.properties.groupers.items.anyOf":
@@ -288,7 +288,7 @@ workflow:
       Per-group encounter rate metrics. Configure how table rows are aggregated
       and which metric columns appear.
     tasks:
-      - name: Aggregator
+      - name: Summarize by
         id: summary_groupers
         task: set_groupers
 

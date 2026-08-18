@@ -100,7 +100,7 @@ Configure how results are grouped and split into per-group dashboard views. Each
 
 The heart of the workflow: how the summary table rows are aggregated and which metric columns appear.
 
-- **Aggregator** (optional): Group summary table rows by category, time period or spatial feature group — each aggregator adds a grouping column within the same dashboard view. The choices are the same Category / Time / Spatial options as in Group Data.
+- **Summarize by** (optional): Group summary table rows by category, time period or spatial feature group — each entry adds a grouping column within the same dashboard view. The choices are the same Category / Time / Spatial options as in Group Data.
   - Default: `Patrol Type`
   - Note: Leave empty for a single overall row
 - **Measure Encounters By** (required): Choose how encounters are measured
@@ -170,7 +170,7 @@ The workflow creates a dashboard with one main visualization:
 
 - **Format**: Interactive table
 - **Features**:
-  - One row per Aggregator group (for example, one row per patrol type), or a single overall row if no Aggregator is set
+  - One row per Summarize by group (for example, one row per patrol type), or a single overall row if no Summarize by entry is set
   - Grouping columns first (with friendly headers such as `Patrol Type` or `Month`), followed by your chosen metric columns in the order you configured them
   - Sortable columns: click a column header to sort
   - Download button: export the table's data for use in Excel or Google Sheets
@@ -197,7 +197,7 @@ Here are some typical scenarios and how to configure the workflow for each:
   - Until: `2015-02-28T23:59:59`
   - Timezone: `Africa/Nairobi (UTC+03:00)`
 - **Patrol Types**: `ecoscope_patrol`
-- **Aggregator**: `Patrol Type` (default)
+- **Summarize by**: `Patrol Type` (default)
 - **Metrics**: defaults (`Total Encounters`, `Encounters per Duration (h)`, `Encounters per Distance (km)`)
 
 **Result**:
@@ -211,7 +211,7 @@ Here are some typical scenarios and how to configure the workflow for each:
 
 **Configuration**:
 - **Time Range**: as above, covering several months
-- **Aggregator**: Time → `Month (example: September)` (`%B`)
+- **Summarize by**: Time → `Month (example: September)` (`%B`)
 - **Metrics**: defaults
 
 **Result**:
@@ -225,7 +225,7 @@ Here are some typical scenarios and how to configure the workflow for each:
 
 **Configuration**:
 - **Time Range**: your analysis window
-- **Aggregator**: Spatial → the name of your spatial feature group in EarthRanger (e.g. `Management Sectors`)
+- **Summarize by**: Spatial → the name of your spatial feature group in EarthRanger (e.g. `Management Sectors`)
 - **Group Data**: optionally add the same spatial group to also split the dashboard into one view per region
 
 **Result**:
@@ -238,7 +238,7 @@ Here are some typical scenarios and how to configure the workflow for each:
 **Goal**: An effort-focused summary per patrol, with distance in meters and rates per day.
 
 **Configuration**:
-- **Aggregator**: `Patrol Serial Number`
+- **Summarize by**: `Patrol Serial Number`
 - **Metrics**:
   - `Patrol Count`
   - `Patrol Days`
@@ -293,7 +293,7 @@ Here are some typical scenarios and how to configure the workflow for each:
 
 #### Spatial grouper fails or produces no groups
 
-**Problem**: A Spatial aggregator or grouper doesn't resolve.
+**Problem**: A Spatial entry under Summarize by or Group Data doesn't resolve.
 
 **Solutions**:
 - The spatial feature group name must match your EarthRanger site exactly, including capitalization
