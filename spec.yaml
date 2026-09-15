@@ -25,8 +25,8 @@ metadata:
       indicators:
         - name: Total Encounters
         - name: Total Events
-        - name: Encounters per Kilometer
-        - name: Encounters per Hour
+        - name: Encounters per Distance
+        - name: Encounters per Duration
         - name: Encounters per Patrol
         - name: Encounters per Patrol Day
         - name: Patrol Count
@@ -40,6 +40,7 @@ metadata:
   documentation: https://github.com/wildlife-dynamics/patrol-encounter-rate-stats#readme
   readme: README.md
   keywords: [patrol, encounter, rate, stats, earthranger]
+  thumbnail: resources/thumbnail.png
 
 requirements:
   # >=2.18.3: first release with concat_dataframes, set_encounter_rate_metrics
