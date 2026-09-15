@@ -636,6 +636,7 @@ def main(params: dict[str, Any], validate_params_schema: bool = True):
             retain_columns=[],
             rename_columns={"patrol_type__value": "patrol_type"},
             raise_if_not_found=False,
+            duplicate_strategy="suffix",
             **(params.get("traj_rename_cols") or {}),
         )
         .call()
