@@ -85,6 +85,8 @@ Which patrols and events to analyze.
   - Note: Leave empty to count all patrol events. Values must match EarthRanger exactly — an unmatched value means zero events are counted
 - **Patrol Status** (optional): Which patrol statuses to include
   - Default: `done`
+- **Event State** (optional): Which event states to include (`new`, `active`, `resolved`, `review`)
+  - Note: Leave empty to include events of all states
 
 #### 5. Group Data
 
