@@ -1,27 +1,532 @@
 # Test cases for patrol_encounter_rate_stats
 #
-# All development cases run with mock_io: true against the task libraries'
-# shipped example-return fixtures — no credentials needed. The mep-dev case
-# runs live against EarthRanger and needs the
-# ECOSCOPE_WORKFLOWS__CONNECTIONS__EARTHRANGER__MEP_DEV__* env vars (added to
-# .github/workflows/test.yml at publish).
+# Mock cases run with mock_io: true. Flag-on cases (patrol leg schema) use the
+# synthetic fixtures under dev/fixtures/legs (dev/fixtures/build_leg_fixtures.py:
+# 2 patrols, 3 legs, 9 events, 2 members + 1 asset per leg) via
+# mock_io_overrides; flag-off cases keep the task libraries' packaged 2015
+# fixtures and add only the leg frames the library builds from them
+# (dev/fixtures/flag-off, name columns "None"). The mep-dev cases run live
+# against EarthRanger and need the
+# ECOSCOPE_WORKFLOWS__CONNECTIONS__EARTHRANGER__MEP_DEV__* env vars.
 #
-# Coverage matrix (every Aggregator dropdown option appears at least once):
-#   Category presets: patrol_type (base, by-patrol-type, mep-dev),
-#     patrol_subject (zero-events, by-patrol-type),
-#     patrol_serial_number (metric-subset)
-#   Time formats: %B (grouped), %Y / %Y-%m / %Y-%m-%d (calendar-aggregators),
-#     %j / %d / %A / %H (subday-aggregators)
-#   Spatial: both the Group Data and Aggregator resolver chains (spatial)
-#   Idempotency guards: temporal (grouped: %B on both sides),
-#     spatial (spatial: same group on both sides)
+# Expected numbers on the leg fixtures (pinned from the first green run):
+# Total Encounters 9, Total Duration 10 h (the trajectory joins the one-hour gap
+# between legs 1 and 2 into a track segment), Events per Hour 0.90, Total
+# Distance 34.86 km; Active Duration 9 h, Elapsed Duration 10 h, Leg Count 3,
+# Member-days 6; per member (explode) 9 events, 9 h, Member-days 3; spatial
+# LegTestRegions 6.69 h West / 2.31 h East, Leg Count 3 each, events 6 / 3.
+#
+# The cmp-2015-* cases are the pre-change cases verbatim (plus the flag-off leg
+# frames): dev/compare_before_after.py checks every shared column against the
+# before snapshot taken on the unmodified spec (.scratch/before, gitignored).
 
 base:
   name: Base
   description: >-
+    Mocked IO on the leg fixtures — form defaults (Summarize-by Patrol Type, the default three metrics): one row, Total Encounters 9, Total Duration 10 h, Events per Hour 0.90, Total Distance 34.86 km, Events per Km 0.26.
+  mock_io: true
+  mock_io_overrides:
+    ecoscope.platform.tasks.io.get_patrols_from_combined_params: dev/fixtures/legs/patrols.parquet
+    ecoscope.platform.tasks.io.get_patrol_observations_from_patrols_df_and_combined_params: dev/fixtures/legs/observations.parquet
+    ecoscope.platform.tasks.io.get_patrol_segments_from_patrols_df_and_combined_params: dev/fixtures/legs/legs.parquet
+    ecoscope.platform.tasks.io.add_patrol_team_names: dev/fixtures/legs/legs-team-names.parquet
+    ecoscope.platform.tasks.io.add_patrol_roster_names: dev/fixtures/legs/legs-roster-names.parquet
+  params:
+    workflow_details:
+      name: "Patrol Encounter Rate Stats"
+      description: "Per-category encounter rate summary table."
+    er_client_name:
+      data_source:
+        name: "er_asia"
+    time_range:
+      since: "2026-01-05T00:00:00"
+      until: "2026-01-07T00:00:00"
+      timezone:
+        label: "UTC (UTC+00:00)"
+        tzCode: "UTC"
+        name: "(UTC+00:00) UTC"
+        utc: "+00:00"
+    er_params:
+      patrol_types: ["ecoscope_leg_test"]
+      event_types: []
+    groupers:
+      groupers: []
+    summary_groupers:
+      groupers:
+        - index_name: "patrol_type"
+
+all-presets:
+  name: All Presets
+  description: >-
+    Mocked IO — every preset in the picker (17) plus a custom metric, Summarize-by Patrol Subject: the thirteen existing columns next to Active Duration 9 h, Elapsed Duration 10 h, Leg Count 3, Member-days 6.
+  mock_io: true
+  mock_io_overrides:
+    ecoscope.platform.tasks.io.get_patrols_from_combined_params: dev/fixtures/legs/patrols.parquet
+    ecoscope.platform.tasks.io.get_patrol_observations_from_patrols_df_and_combined_params: dev/fixtures/legs/observations.parquet
+    ecoscope.platform.tasks.io.get_patrol_segments_from_patrols_df_and_combined_params: dev/fixtures/legs/legs.parquet
+    ecoscope.platform.tasks.io.add_patrol_team_names: dev/fixtures/legs/legs-team-names.parquet
+    ecoscope.platform.tasks.io.add_patrol_roster_names: dev/fixtures/legs/legs-roster-names.parquet
+  params:
+    workflow_details:
+      name: "Patrol Encounter Rate Stats"
+      description: "Per-category encounter rate summary table."
+    er_client_name:
+      data_source:
+        name: "er_asia"
+    time_range:
+      since: "2026-01-05T00:00:00"
+      until: "2026-01-07T00:00:00"
+      timezone:
+        label: "UTC (UTC+00:00)"
+        tzCode: "UTC"
+        name: "(UTC+00:00) UTC"
+        utc: "+00:00"
+    er_params:
+      patrol_types: ["ecoscope_leg_test"]
+      event_types: []
+    groupers:
+      groupers: []
+    summary_groupers:
+      groupers:
+        - index_name: "patrol_subject"
+    summary_metrics:
+      metrics:
+        - metric: "total_encounter"
+        - metric: "total_events"
+        - metric: "encounters_per_duration"
+          unit: "h"
+        - metric: "encounters_per_distance"
+          unit: "km"
+        - metric: "encounters_per_patrol"
+        - metric: "encounters_per_patrol_day"
+        - metric: "patrol_count"
+        - metric: "patrol_days"
+        - metric: "total_distance"
+          unit: "km"
+        - metric: "total_duration"
+          unit: "h"
+        - metric: "area_covered_merged"
+          swath_width_meters: 500.0
+        - metric: "area_covered_unmerged"
+          swath_width_meters: 500.0
+        - metric: "active_duration"
+          unit: "h"
+        - metric: "elapsed_duration"
+          unit: "h"
+        - metric: "leg_count"
+        - metric: "member_days"
+        - metric: "custom"
+          display_name: "Avg Leg Distance"
+          aggregator: "mean"
+          column: "dist_meters"
+          convert_units: true
+          original_unit: "m"
+          new_unit: "km"
+
+grouped-team:
+  name: Grouped by Team
+  description: >-
+    Mocked IO — Team dashboard grouper: one view (Leg Test Team) with the team name resolved on legs, tracks and events.
+  mock_io: true
+  mock_io_overrides:
+    ecoscope.platform.tasks.io.get_patrols_from_combined_params: dev/fixtures/legs/patrols.parquet
+    ecoscope.platform.tasks.io.get_patrol_observations_from_patrols_df_and_combined_params: dev/fixtures/legs/observations.parquet
+    ecoscope.platform.tasks.io.get_patrol_segments_from_patrols_df_and_combined_params: dev/fixtures/legs/legs.parquet
+    ecoscope.platform.tasks.io.add_patrol_team_names: dev/fixtures/legs/legs-team-names.parquet
+    ecoscope.platform.tasks.io.add_patrol_roster_names: dev/fixtures/legs/legs-roster-names.parquet
+  params:
+    workflow_details:
+      name: "Patrol Encounter Rate Stats"
+      description: "Per-category encounter rate summary table."
+    er_client_name:
+      data_source:
+        name: "er_asia"
+    time_range:
+      since: "2026-01-05T00:00:00"
+      until: "2026-01-07T00:00:00"
+      timezone:
+        label: "UTC (UTC+00:00)"
+        tzCode: "UTC"
+        name: "(UTC+00:00) UTC"
+        utc: "+00:00"
+    er_params:
+      patrol_types: ["ecoscope_leg_test"]
+      event_types: []
+    groupers:
+      groupers:
+        - index_name: "patrol_team_name"
+    summary_groupers:
+      groupers:
+        - index_name: "patrol_subject"
+    summary_metrics:
+      metrics:
+        - metric: "total_encounter"
+        - metric: "encounters_per_duration"
+          unit: "h"
+        - metric: "encounters_per_distance"
+          unit: "km"
+        - metric: "active_duration"
+          unit: "h"
+        - metric: "elapsed_duration"
+          unit: "h"
+        - metric: "leg_count"
+        - metric: "member_days"
+
+grouped-member:
+  name: Grouped by Member
+  description: >-
+    Mocked IO — Member dashboard grouper explodes every frame: two views (Ranger Amani, Ranger Baraka), each with the full 9 events, 9 h active and Member-days 3, Events per Hour still 0.90; Summarize-by Patrol Type.
+  mock_io: true
+  mock_io_overrides:
+    ecoscope.platform.tasks.io.get_patrols_from_combined_params: dev/fixtures/legs/patrols.parquet
+    ecoscope.platform.tasks.io.get_patrol_observations_from_patrols_df_and_combined_params: dev/fixtures/legs/observations.parquet
+    ecoscope.platform.tasks.io.get_patrol_segments_from_patrols_df_and_combined_params: dev/fixtures/legs/legs.parquet
+    ecoscope.platform.tasks.io.add_patrol_team_names: dev/fixtures/legs/legs-team-names.parquet
+    ecoscope.platform.tasks.io.add_patrol_roster_names: dev/fixtures/legs/legs-roster-names.parquet
+  params:
+    workflow_details:
+      name: "Patrol Encounter Rate Stats"
+      description: "Per-category encounter rate summary table."
+    er_client_name:
+      data_source:
+        name: "er_asia"
+    time_range:
+      since: "2026-01-05T00:00:00"
+      until: "2026-01-07T00:00:00"
+      timezone:
+        label: "UTC (UTC+00:00)"
+        tzCode: "UTC"
+        name: "(UTC+00:00) UTC"
+        utc: "+00:00"
+    er_params:
+      patrol_types: ["ecoscope_leg_test"]
+      event_types: []
+    groupers:
+      groupers:
+        - index_name: "patrol_member_names"
+    summary_groupers:
+      groupers:
+        - index_name: "patrol_type"
+    summary_metrics:
+      metrics:
+        - metric: "total_encounter"
+        - metric: "encounters_per_duration"
+          unit: "h"
+        - metric: "encounters_per_distance"
+          unit: "km"
+        - metric: "active_duration"
+          unit: "h"
+        - metric: "elapsed_duration"
+          unit: "h"
+        - metric: "leg_count"
+        - metric: "member_days"
+
+summarize-by-asset:
+  name: Summarize by Asset
+  description: >-
+    Mocked IO — Asset grouper in the Summarize-by card (explode inside the per-view chain): one row (Patrol Vehicle 1) with Member-days not rescaled (6).
+  mock_io: true
+  mock_io_overrides:
+    ecoscope.platform.tasks.io.get_patrols_from_combined_params: dev/fixtures/legs/patrols.parquet
+    ecoscope.platform.tasks.io.get_patrol_observations_from_patrols_df_and_combined_params: dev/fixtures/legs/observations.parquet
+    ecoscope.platform.tasks.io.get_patrol_segments_from_patrols_df_and_combined_params: dev/fixtures/legs/legs.parquet
+    ecoscope.platform.tasks.io.add_patrol_team_names: dev/fixtures/legs/legs-team-names.parquet
+    ecoscope.platform.tasks.io.add_patrol_roster_names: dev/fixtures/legs/legs-roster-names.parquet
+  params:
+    workflow_details:
+      name: "Patrol Encounter Rate Stats"
+      description: "Per-category encounter rate summary table."
+    er_client_name:
+      data_source:
+        name: "er_asia"
+    time_range:
+      since: "2026-01-05T00:00:00"
+      until: "2026-01-07T00:00:00"
+      timezone:
+        label: "UTC (UTC+00:00)"
+        tzCode: "UTC"
+        name: "(UTC+00:00) UTC"
+        utc: "+00:00"
+    er_params:
+      patrol_types: ["ecoscope_leg_test"]
+      event_types: []
+    groupers:
+      groupers: []
+    summary_groupers:
+      groupers:
+        - index_name: "patrol_asset_names"
+    summary_metrics:
+      metrics:
+        - metric: "total_encounter"
+        - metric: "encounters_per_duration"
+          unit: "h"
+        - metric: "encounters_per_distance"
+          unit: "km"
+        - metric: "active_duration"
+          unit: "h"
+        - metric: "elapsed_duration"
+          unit: "h"
+        - metric: "leg_count"
+        - metric: "member_days"
+
+spatial-grouped:
+  name: Spatial Grouped
+  description: >-
+    Mocked IO — the synthetic LegTestRegions feature group (West / East, cutting every leg ~3:1) on both cards: resolver chains, add_spatial_index on tracks and events, apportion_legs_by_spatial_index on the legs (Active Duration 6.69 h West / 2.31 h East, Elapsed 8.12 / 1.88 h, Member-days 4 / 2, Leg Count 3 in each; events 6 West / 3 East so Events per Hour reads 0.78 / 1.27; the second pass is a no-op).
+  mock_io: true
+  mock_io_overrides:
+    ecoscope.platform.tasks.io.get_patrols_from_combined_params: dev/fixtures/legs/patrols.parquet
+    ecoscope.platform.tasks.io.get_patrol_observations_from_patrols_df_and_combined_params: dev/fixtures/legs/observations.parquet
+    ecoscope.platform.tasks.io.get_patrol_segments_from_patrols_df_and_combined_params: dev/fixtures/legs/legs.parquet
+    ecoscope.platform.tasks.io.add_patrol_team_names: dev/fixtures/legs/legs-team-names.parquet
+    ecoscope.platform.tasks.io.add_patrol_roster_names: dev/fixtures/legs/legs-roster-names.parquet
+    ecoscope.platform.tasks.io.get_spatial_features_group: dev/fixtures/legs/spatial-features.parquet
+  params:
+    workflow_details:
+      name: "Patrol Encounter Rate Stats"
+      description: "Per-category encounter rate summary table."
+    er_client_name:
+      data_source:
+        name: "er_asia"
+    time_range:
+      since: "2026-01-05T00:00:00"
+      until: "2026-01-07T00:00:00"
+      timezone:
+        label: "UTC (UTC+00:00)"
+        tzCode: "UTC"
+        name: "(UTC+00:00) UTC"
+        utc: "+00:00"
+    er_params:
+      patrol_types: ["ecoscope_leg_test"]
+      event_types: []
+    groupers:
+      groupers:
+        - spatial_index_name: "LegTestRegions"
+    summary_groupers:
+      groupers:
+        - spatial_index_name: "LegTestRegions"
+    summary_metrics:
+      metrics:
+        - metric: "total_encounter"
+        - metric: "encounters_per_duration"
+          unit: "h"
+        - metric: "encounters_per_distance"
+          unit: "km"
+        - metric: "active_duration"
+          unit: "h"
+        - metric: "elapsed_duration"
+          unit: "h"
+        - metric: "leg_count"
+        - metric: "member_days"
+
+grouped-month:
+  name: Grouped by Month
+  description: >-
+    Mocked IO — serial-number plus monthly temporal grouper in Group Data and Month as the aggregator: temporal index on all three frames, the idempotency guard on the second pass, the int->string casts; one January view per patrol (1001: 6 events, 7 h active, 2 legs; 1002: 3 events, 2 h, 1 leg).
+  mock_io: true
+  mock_io_overrides:
+    ecoscope.platform.tasks.io.get_patrols_from_combined_params: dev/fixtures/legs/patrols.parquet
+    ecoscope.platform.tasks.io.get_patrol_observations_from_patrols_df_and_combined_params: dev/fixtures/legs/observations.parquet
+    ecoscope.platform.tasks.io.get_patrol_segments_from_patrols_df_and_combined_params: dev/fixtures/legs/legs.parquet
+    ecoscope.platform.tasks.io.add_patrol_team_names: dev/fixtures/legs/legs-team-names.parquet
+    ecoscope.platform.tasks.io.add_patrol_roster_names: dev/fixtures/legs/legs-roster-names.parquet
+  params:
+    workflow_details:
+      name: "Patrol Encounter Rate Stats"
+      description: "Per-category encounter rate summary table."
+    er_client_name:
+      data_source:
+        name: "er_asia"
+    time_range:
+      since: "2026-01-05T00:00:00"
+      until: "2026-01-07T00:00:00"
+      timezone:
+        label: "UTC (UTC+00:00)"
+        tzCode: "UTC"
+        name: "(UTC+00:00) UTC"
+        utc: "+00:00"
+    er_params:
+      patrol_types: ["ecoscope_leg_test"]
+      event_types: []
+    groupers:
+      groupers:
+        - index_name: "patrol_serial_number"
+        - temporal_index: "%B"
+    summary_groupers:
+      groupers:
+        - temporal_index: "%B"
+    summary_metrics:
+      metrics:
+        - metric: "total_encounter"
+        - metric: "encounters_per_duration"
+          unit: "h"
+        - metric: "encounters_per_distance"
+          unit: "km"
+        - metric: "active_duration"
+          unit: "h"
+        - metric: "elapsed_duration"
+          unit: "h"
+        - metric: "leg_count"
+        - metric: "member_days"
+
+zero-events:
+  name: Zero Events
+  description: >-
+    Mocked IO on the leg fixtures — event_types filter matches nothing, so the events branch empties and skips; concat_dataframes drops the skip sentinel and the leg join still renders: Total Encounters 0, effort and leg columns populated.
+  mock_io: true
+  mock_io_overrides:
+    ecoscope.platform.tasks.io.get_patrols_from_combined_params: dev/fixtures/legs/patrols.parquet
+    ecoscope.platform.tasks.io.get_patrol_observations_from_patrols_df_and_combined_params: dev/fixtures/legs/observations.parquet
+    ecoscope.platform.tasks.io.get_patrol_segments_from_patrols_df_and_combined_params: dev/fixtures/legs/legs.parquet
+    ecoscope.platform.tasks.io.add_patrol_team_names: dev/fixtures/legs/legs-team-names.parquet
+    ecoscope.platform.tasks.io.add_patrol_roster_names: dev/fixtures/legs/legs-roster-names.parquet
+  params:
+    workflow_details:
+      name: "Patrol Encounter Rate Stats"
+      description: "Per-category encounter rate summary table."
+    er_client_name:
+      data_source:
+        name: "er_asia"
+    time_range:
+      since: "2026-01-05T00:00:00"
+      until: "2026-01-07T00:00:00"
+      timezone:
+        label: "UTC (UTC+00:00)"
+        tzCode: "UTC"
+        name: "(UTC+00:00) UTC"
+        utc: "+00:00"
+    er_params:
+      patrol_types: ["ecoscope_leg_test"]
+      event_types: ["no_such_event_type"]
+    groupers:
+      groupers: []
+    summary_groupers:
+      groupers:
+        - index_name: "patrol_subject"
+    summary_metrics:
+      metrics:
+        - metric: "total_encounter"
+        - metric: "encounters_per_duration"
+          unit: "h"
+        - metric: "encounters_per_distance"
+          unit: "km"
+        - metric: "active_duration"
+          unit: "h"
+        - metric: "elapsed_duration"
+          unit: "h"
+        - metric: "leg_count"
+        - metric: "member_days"
+
+empty:
+  name: Empty
+  description: >-
+    Mocked IO — zero-row fixtures (dev/fixtures/empty): the run must complete without a task error.
+  mock_io: true
+  mock_io_overrides:
+    ecoscope.platform.tasks.io.get_patrols_from_combined_params: dev/fixtures/empty/patrols.parquet
+    ecoscope.platform.tasks.io.get_patrol_observations_from_patrols_df_and_combined_params: dev/fixtures/empty/observations.parquet
+    ecoscope.platform.tasks.io.get_patrol_segments_from_patrols_df_and_combined_params: dev/fixtures/empty/legs.parquet
+    ecoscope.platform.tasks.io.add_patrol_team_names: dev/fixtures/empty/legs-team-names.parquet
+    ecoscope.platform.tasks.io.add_patrol_roster_names: dev/fixtures/empty/legs-roster-names.parquet
+  params:
+    workflow_details:
+      name: "Patrol Encounter Rate Stats"
+      description: "Per-category encounter rate summary table."
+    er_client_name:
+      data_source:
+        name: "er_asia"
+    time_range:
+      since: "2026-01-05T00:00:00"
+      until: "2026-01-07T00:00:00"
+      timezone:
+        label: "UTC (UTC+00:00)"
+        tzCode: "UTC"
+        name: "(UTC+00:00) UTC"
+        utc: "+00:00"
+    er_params:
+      patrol_types: ["ecoscope_leg_test"]
+      event_types: []
+    groupers:
+      groupers: []
+    summary_groupers:
+      groupers:
+        - index_name: "patrol_type"
+    summary_metrics:
+      metrics:
+        - metric: "total_encounter"
+        - metric: "encounters_per_duration"
+          unit: "h"
+        - metric: "encounters_per_distance"
+          unit: "km"
+        - metric: "active_duration"
+          unit: "h"
+        - metric: "elapsed_duration"
+          unit: "h"
+        - metric: "leg_count"
+        - metric: "member_days"
+
+flag-off:
+  name: Flag Off (packaged 2015 fixtures)
+  description: >-
+    Mocked IO — a site without the patrol_schemas flag: the PACKAGED 2015 patrols, observations and events (no leg columns) with the leg frames the library builds from those patrols (dev/fixtures/flag-off). A Member dashboard grouper yields one "None" view, Member-days is blank, and every existing column equals the pre-change snapshot (Total Encounters 118, Total Duration 1220.67 h, Events per Hour 0.10, Total Distance 3315.85 km, Events per Km 0.04); the two packaged 2015 legs give Active 18 h, Elapsed 18 h, Leg Count 2.
+  mock_io: true
+  mock_io_overrides:
+    ecoscope.platform.tasks.io.get_patrol_segments_from_patrols_df_and_combined_params: dev/fixtures/flag-off/legs.parquet
+    ecoscope.platform.tasks.io.add_patrol_team_names: dev/fixtures/flag-off/legs-team-names.parquet
+    ecoscope.platform.tasks.io.add_patrol_roster_names: dev/fixtures/flag-off/legs-roster-names.parquet
+  params:
+    workflow_details:
+      name: "Patrol Encounter Rate Stats"
+      description: "Per-category encounter rate summary table."
+    er_client_name:
+      data_source:
+        name: "er_asia"
+    time_range:
+      since: "2015-01-10T00:00:00"
+      until: "2015-02-28T23:59:59"
+      timezone:
+        label: "UTC (UTC+00:00)"
+        tzCode: "UTC"
+        name: "(UTC+00:00) UTC"
+        utc: "+00:00"
+    er_params:
+      patrol_types: ["demo_patrol"]
+      event_types: []
+    groupers:
+      groupers:
+        - index_name: "patrol_member_names"
+    summary_groupers:
+      groupers:
+        - index_name: "patrol_type"
+    summary_metrics:
+      metrics:
+        - metric: "total_encounter"
+        - metric: "encounters_per_duration"
+          unit: "h"
+        - metric: "encounters_per_distance"
+          unit: "km"
+        - metric: "total_distance"
+          unit: "km"
+        - metric: "total_duration"
+          unit: "h"
+        - metric: "active_duration"
+          unit: "h"
+        - metric: "elapsed_duration"
+          unit: "h"
+        - metric: "leg_count"
+        - metric: "member_days"
+
+cmp-2015-base:
+  name: Base
+  description: >-
+    Pre-change case kept verbatim for dev/compare_before_after.py (flag-off leg frames added).
     Mocked IO — primary development case (no credentials needed); mirrors the
     form defaults (Aggregator = Patrol Type).
   mock_io: true
+  mock_io_overrides:
+    ecoscope.platform.tasks.io.get_patrol_segments_from_patrols_df_and_combined_params: dev/fixtures/flag-off/legs.parquet
+    ecoscope.platform.tasks.io.add_patrol_team_names: dev/fixtures/flag-off/legs-team-names.parquet
+    ecoscope.platform.tasks.io.add_patrol_roster_names: dev/fixtures/flag-off/legs-roster-names.parquet
   params:
     workflow_details:
       name: "Patrol Encounter Rate Stats"
@@ -46,9 +551,10 @@ base:
       groupers:
         - index_name: "patrol_type"
 
-grouped:
+cmp-2015-grouped:
   name: Grouped
   description: >-
+    Pre-change case kept verbatim for dev/compare_before_after.py (flag-off leg frames added).
     Mocked IO — value grouper (patrol serial number) plus monthly temporal
     grouper in Group Data, with Month (%B) ALSO as the Aggregator: hits both
     temporal-index tasks, the string casts, the TemporalGrouper_%B -> "Month"
@@ -56,6 +562,10 @@ grouped:
     level added by the Group Data pass must not be re-added by the
     aggregator pass).
   mock_io: true
+  mock_io_overrides:
+    ecoscope.platform.tasks.io.get_patrol_segments_from_patrols_df_and_combined_params: dev/fixtures/flag-off/legs.parquet
+    ecoscope.platform.tasks.io.add_patrol_team_names: dev/fixtures/flag-off/legs-team-names.parquet
+    ecoscope.platform.tasks.io.add_patrol_roster_names: dev/fixtures/flag-off/legs-roster-names.parquet
   params:
     workflow_details:
       name: "Patrol Encounter Rate Stats"
@@ -82,15 +592,20 @@ grouped:
       groupers:
         - temporal_index: "%B"
 
-spatial:
+cmp-2015-spatial:
   name: Spatial
   description: >-
+    Pre-change case kept verbatim for dev/compare_before_after.py (flag-off leg frames added).
     Mocked IO — spatial grouper on BOTH sides: Group Data and the Aggregator
     each resolve the mock "SpatialGrouperTest" group (Central/East/West),
     exercising both independent resolver chains (extract -> fetch -> resolve),
     add_spatial_index on both branches, and the add_spatial_index idempotency
     guard (the shared index level must not be re-added by the second pass).
   mock_io: true
+  mock_io_overrides:
+    ecoscope.platform.tasks.io.get_patrol_segments_from_patrols_df_and_combined_params: dev/fixtures/flag-off/legs.parquet
+    ecoscope.platform.tasks.io.add_patrol_team_names: dev/fixtures/flag-off/legs-team-names.parquet
+    ecoscope.platform.tasks.io.add_patrol_roster_names: dev/fixtures/flag-off/legs-roster-names.parquet
   params:
     workflow_details:
       name: "Patrol Encounter Rate Stats"
@@ -116,15 +631,20 @@ spatial:
       groupers:
         - spatial_index_name: "SpatialGrouperTest"
 
-zero-events:
+cmp-2015-zero-events:
   name: Zero Events
   description: >-
+    Pre-change case kept verbatim for dev/compare_before_after.py (flag-off leg frames added).
     Mocked IO — event_types filter matches nothing, so the events branch
     empties and skips; concat_dataframes drops the skip sentinel and
     ensure_columns keeps the summary computable: the table must still render
     with Total Events = 0 and effort columns populated (AC 5). Aggregator =
     Patrol Subject.
   mock_io: true
+  mock_io_overrides:
+    ecoscope.platform.tasks.io.get_patrol_segments_from_patrols_df_and_combined_params: dev/fixtures/flag-off/legs.parquet
+    ecoscope.platform.tasks.io.add_patrol_team_names: dev/fixtures/flag-off/legs-team-names.parquet
+    ecoscope.platform.tasks.io.add_patrol_roster_names: dev/fixtures/flag-off/legs-roster-names.parquet
   params:
     workflow_details:
       name: "Patrol Encounter Rate Stats"
@@ -149,12 +669,17 @@ zero-events:
       groupers:
         - index_name: "patrol_subject"
 
-by-patrol-type:
+cmp-2015-by-patrol-type:
   name: By Patrol Type
   description: >-
+    Pre-change case kept verbatim for dev/compare_before_after.py (flag-off leg frames added).
     Mocked IO — multi-column Aggregator [Patrol Subject, Patrol Type];
     exercises multi-column grouping and header renames.
   mock_io: true
+  mock_io_overrides:
+    ecoscope.platform.tasks.io.get_patrol_segments_from_patrols_df_and_combined_params: dev/fixtures/flag-off/legs.parquet
+    ecoscope.platform.tasks.io.add_patrol_team_names: dev/fixtures/flag-off/legs-team-names.parquet
+    ecoscope.platform.tasks.io.add_patrol_roster_names: dev/fixtures/flag-off/legs-roster-names.parquet
   params:
     workflow_details:
       name: "Patrol Encounter Rate Stats"
@@ -180,9 +705,10 @@ by-patrol-type:
         - index_name: "patrol_subject"
         - index_name: "patrol_type"
 
-metric-subset:
+cmp-2015-metric-subset:
   name: Metric Subset
   description: >-
+    Pre-change case kept verbatim for dev/compare_before_after.py (flag-off leg frames added).
     Mocked IO — non-default metric picker: unit overrides (distance in m,
     rate per day), patrol presets (patrol count / patrol days), and the
     per-patrol / per-patrol-day rates, exercising
@@ -190,6 +716,10 @@ metric-subset:
     column order). Aggregator = Patrol Serial Number, completing the
     Category presets.
   mock_io: true
+  mock_io_overrides:
+    ecoscope.platform.tasks.io.get_patrol_segments_from_patrols_df_and_combined_params: dev/fixtures/flag-off/legs.parquet
+    ecoscope.platform.tasks.io.add_patrol_team_names: dev/fixtures/flag-off/legs-team-names.parquet
+    ecoscope.platform.tasks.io.add_patrol_roster_names: dev/fixtures/flag-off/legs-roster-names.parquet
   params:
     workflow_details:
       name: "Patrol Encounter Rate Stats"
@@ -226,14 +756,19 @@ metric-subset:
         - metric: "encounters_per_patrol"
         - metric: "encounters_per_patrol_day"
 
-calendar-aggregators:
+cmp-2015-calendar-aggregators:
   name: Calendar Aggregators
   description: >-
+    Pre-change case kept verbatim for dev/compare_before_after.py (flag-off leg frames added).
     Mocked IO — multi-level temporal Aggregator [Year %Y, Year and Month
     %Y-%m, Date %Y-%m-%d]: together with grouped (%B) this covers the
     calendar-scale Time options, plus multi-level temporal indexing and the
     per-format header renames.
   mock_io: true
+  mock_io_overrides:
+    ecoscope.platform.tasks.io.get_patrol_segments_from_patrols_df_and_combined_params: dev/fixtures/flag-off/legs.parquet
+    ecoscope.platform.tasks.io.add_patrol_team_names: dev/fixtures/flag-off/legs-team-names.parquet
+    ecoscope.platform.tasks.io.add_patrol_roster_names: dev/fixtures/flag-off/legs-roster-names.parquet
   params:
     workflow_details:
       name: "Patrol Encounter Rate Stats"
@@ -260,13 +795,18 @@ calendar-aggregators:
         - temporal_index: "%Y-%m"
         - temporal_index: "%Y-%m-%d"
 
-subday-aggregators:
+cmp-2015-subday-aggregators:
   name: Sub-day Aggregators
   description: >-
+    Pre-change case kept verbatim for dev/compare_before_after.py (flag-off leg frames added).
     Mocked IO — multi-level temporal Aggregator [Day of the year %j, Day of
     the month %d, Day of the week %A, Hour %H]: covers the remaining sub-day
     Time options and their header renames in one run.
   mock_io: true
+  mock_io_overrides:
+    ecoscope.platform.tasks.io.get_patrol_segments_from_patrols_df_and_combined_params: dev/fixtures/flag-off/legs.parquet
+    ecoscope.platform.tasks.io.add_patrol_team_names: dev/fixtures/flag-off/legs-team-names.parquet
+    ecoscope.platform.tasks.io.add_patrol_roster_names: dev/fixtures/flag-off/legs-roster-names.parquet
   params:
     workflow_details:
       name: "Patrol Encounter Rate Stats"
@@ -326,3 +866,47 @@ mep-dev:
     summary_groupers:
       groupers:
         - index_name: "patrol_type"
+
+mep-dev-legs:
+  name: MEP Dev Legs
+  description: >-
+    Live EarthRanger (mep-dev), the seeded ecoscope_leg_test patrols of 5-6 Jan 2026 (2 patrols, 3 legs, no events): expect Total Encounters 0, Active Duration 9 h, Elapsed 10 h, Leg Count 3, Member-days 6 and the team view resolved.
+  mock_io: false
+  params:
+    workflow_details:
+      name: "Patrol Encounter Rate Stats"
+      description: "Per-category encounter rate summary table."
+    er_client_name:
+      data_source:
+        name: "mep_dev"
+    time_range:
+      since: "2026-01-05T00:00:00"
+      until: "2026-01-07T00:00:00"
+      timezone:
+        label: "UTC (UTC+00:00)"
+        tzCode: "UTC"
+        name: "(UTC+00:00) UTC"
+        utc: "+00:00"
+    er_params:
+      patrol_types: ["ecoscope_leg_test"]
+      event_types: []
+      status: ["done"]
+    groupers:
+      groupers:
+        - index_name: "patrol_team_name"
+    summary_groupers:
+      groupers:
+        - index_name: "patrol_subject"
+    summary_metrics:
+      metrics:
+        - metric: "total_encounter"
+        - metric: "encounters_per_duration"
+          unit: "h"
+        - metric: "encounters_per_distance"
+          unit: "km"
+        - metric: "active_duration"
+          unit: "h"
+        - metric: "elapsed_duration"
+          unit: "h"
+        - metric: "leg_count"
+        - metric: "member_days"
