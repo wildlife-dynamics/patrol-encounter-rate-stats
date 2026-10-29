@@ -2,14 +2,14 @@
 
 ## Introduction
 
-This workflow helps you to measure how frequently your patrols encounter events of interest, relative to the effort those patrols put in. It combines patrol tracks and patrol events from **EarthRanger** into a single summary table of encounter rate statistics.
+This workflow helps you to measure how frequently your patrols encounter events of interest, relative to the effort those patrols put in. It combines patrol tracks, patrol legs and patrol events from **EarthRanger** into a single summary table of encounter rate statistics.
 
 **What this workflow does:**
 
-- Downloads patrol tracks and patrol events from EarthRanger for your chosen time range
-- Converts patrol observations into trajectories to measure effort (distance travelled, time on patrol, days patrolled)
+- Downloads patrol tracks, patrol legs and patrol events from EarthRanger for your chosen time range
+- Converts patrol observations into trajectories to measure effort (distance travelled, time on patrol, days patrolled), and reads patrol legs for team, member and asset effort (active and elapsed duration, leg count, member-days)
 - Counts patrol events (or totals an event details field such as "Number of Animals")
-- Calculates encounter rate metrics per category — for example Total Encounters, Encounters per Hour, and Encounters per Kilometer, broken down by patrol type, patrol subject, time period, or spatial region
+- Calculates encounter rate metrics per category — for example Total Encounters, Encounters per Hour, and Encounters per Kilometer, broken down by patrol type, patrol subject, team, member, asset, time period, or spatial region
 - Presents everything as an interactive, sortable summary table on a dashboard, with a built-in download option
 
 **Who should use this:**
@@ -34,6 +34,7 @@ Before using this workflow, you need:
    - Your EarthRanger site must have patrols with tracked subjects (so effort can be measured) and events reported during those patrols
    - You'll need to know your patrol type names — you can find them in your EarthRanger Admin site under Activity → Patrol Types
    - If you plan to count only specific event types, you'll also need their exact "Event Types" values, found at `https://<your-site>.pamdas.org/admin/activity/eventtype/`
+   - To group by **Team**, **Member** or **Asset**, or to use the **Active Duration**, **Elapsed Duration**, **Leg Count** and **Member-days** metrics, your EarthRanger site must record patrol legs with a team, members and assets (the patrol leg schema). On sites without it these groupers show a single `None` group and the leg metrics stay blank
 
 ## Installation
 
@@ -93,7 +94,8 @@ Which patrols and events to analyze.
 Configure how results are grouped and split into per-group dashboard views. Each grouper creates a separate view of the summary table, switchable on the dashboard.
 
 - **Groupers** (optional): Add one or more groupers of these kinds:
-  - **Category**: `Patrol Serial Number`, `Patrol Type`, or `Patrol Subject`
+  - **Category**: `Patrol Serial Number`, `Patrol Type`, `Patrol Subject`, `Team`, `Member`, or `Asset`
+    - `Team`, `Member` and `Asset` come from the patrol legs. A leg with several members or assets is credited in full to each of them, so one view per member shows that member's whole legs
   - **Time**: a time period such as Year (`%Y`), Month (`%B`), Year and Month (`%Y-%m`), Date (`%Y-%m-%d`), day-of-year (`%j`), day-of-month (`%d`), day-of-week (`%A`), or Hour (`%H`)
   - **Spatial**: the name of a spatial feature group from your EarthRanger site
   - Note: Leave empty for a single dashboard view covering all data
@@ -106,8 +108,7 @@ The heart of the workflow: how the summary table rows are aggregated and which m
   - Default: `Patrol Type`
   - Note: Leave empty for a single overall row
 - **Measure Encounters By** (required): Choose how encounters are measured
-  - **Number of Events** (default): counts patrol events
-  - **Sum of an Event Field**: totals a chosen event details field instead — an **Event Field to Sum** input appears, using the field title shown in EarthRanger (for example `Number of Animals`)
+  - **Measure Events By**: `Number of Events` (default) counts patrol events; `Sum of an Event Field` totals a chosen event details field instead — an **Event Field to Sum** input appears, using the field title shown in EarthRanger (for example `Number of Animals`)
   - Note: The Encounter metrics follow this choice; the Total Events metric always counts events
 - **Metrics** (required): The metric columns of the table, in the order you add them:
 
@@ -123,6 +124,10 @@ The heart of the workflow: how the summary table rows are aggregated and which m
   | Total Distance | Distance travelled on patrol | Unit: `km` or `m` |
   | Patrol Count | Number of patrols | — |
   | Patrol Days | Distinct calendar days with patrol movement | — |
+  | Active Duration | Time covered by patrol legs (pauses excluded), from the patrol leg records | Unit: `h` or `d` |
+  | Elapsed Duration | Time from each patrol's first leg start to its last leg end | Unit: `h` or `d` |
+  | Leg Count | Number of patrol legs | — |
+  | Member-days | Members on each leg × calendar days the leg touches, summed; one member's share per row when summarized by `Member` | — |
   | Area Covered (Merged) | Area swept by patrols, overlaps merged | Swath Width (m) |
   | Area Covered (Unmerged) | Area swept by patrols, overlaps counted separately | Swath Width (m) |
   | Custom | Your own statistic over a data column | Display Name, Statistic (`sum`, `count`, `min`, `max`, `mean`, `nunique`, `median`), Column, Decimal Places, Convert Units |
@@ -138,8 +143,13 @@ These optional settings provide additional control over your workflow:
 Clean up GPS data before effort and encounter rates are calculated.
 
 - **Bounding Box**: Only include patrol observations and events whose coordinates fall inside this bounding box
+  - **Min Latitude** / **Max Latitude**: Default `-90` / `90`
+  - **Min Longitude** / **Max Longitude**: Default `-180` / `180`
 - **Filter Exact Point Coordinates**: Exclude observations and events recorded at these exact coordinates (e.g. known bad GPS fixes)
 - **Trajectory Filter**: Drop trajectory segments outside these length / time / speed bounds (e.g. to remove implausible jumps)
+  - **Minimum Segment Length (Meters)** / **Maximum Segment Length (Meters)**: Default `0.001` / `100000`
+  - **Minimum Segment Duration (Seconds)** / **Maximum Segment Duration (Seconds)**: Default `1` / `172800`
+  - **Minimum Segment Speed (Kilometers per Hour)** / **Maximum Segment Speed (Kilometers per Hour)**: Default `0.01` / `500`
 
 ## Running the Workflow
 
@@ -181,6 +191,7 @@ The workflow creates a dashboard with one main visualization:
 ### Reading the numbers
 
 - **Effort metrics** (Total Duration, Total Distance, Patrol Count, Patrol Days, Area Covered) are measured from patrol trajectories.
+- **Leg metrics** (Active Duration, Elapsed Duration, Leg Count, Member-days) are measured from the patrol leg records, not from GPS tracks. They stay blank on sites that do not record patrol legs.
 - **Encounter metrics** follow your "Measure Encounters By" choice: event counts, or totals of your chosen event field.
 - **Rates** are encounters divided by effort — e.g. Encounters per Duration (h) = encounters ÷ patrol hours.
 - If a group has no effort (zero patrol time or distance), its rate cells show as empty/NA rather than a misleading zero. If your event type filter matches nothing, Total Events shows `0` and the effort columns still populate.
@@ -292,6 +303,14 @@ Here are some typical scenarios and how to configure the workflow for each:
 **Solutions**:
 - This is expected when the group has zero effort (no patrol time, distance, or patrols) — a rate can't be computed
 - Check whether patrol tracks exist for that group's subjects in the time range
+
+#### Team, Member or Asset shows a single `None` group
+
+**Problem**: Grouping by **Team**, **Member** or **Asset** produces one group named `None`, or the leg metrics are blank.
+
+**Solutions**:
+- Your EarthRanger site must record patrol legs with a team, members and assets (the patrol leg schema); ask your EarthRanger administrator whether it is enabled
+- Legs without a team, members or assets fall into the `None` group — check the patrol's leg details in EarthRanger
 
 #### Spatial grouper fails or produces no groups
 

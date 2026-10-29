@@ -25,8 +25,8 @@
       "properties": {
         "data_source": {
           "$ref": "#/$defs/EarthRangerConnection",
-          "title": "",
-          "description": "Select one of your configured data sources."
+          "description": "Select one of your configured data sources.",
+          "title": ""
         }
       },
       "required": [
@@ -39,23 +39,19 @@
       "additionalProperties": false,
       "properties": {
         "since": {
+          "description": "The start time",
           "format": "date-time",
           "title": "Since",
-          "type": "string",
-          "description": "The start time"
+          "type": "string"
         },
         "until": {
+          "description": "The end time",
           "format": "date-time",
           "title": "Until",
-          "type": "string",
-          "description": "The end time"
+          "type": "string"
         },
         "timezone": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/TimezoneInfo"
-            }
-          ],
+          "$ref": "#/$defs/TimezoneInfo",
           "default": null,
           "title": "Timezone"
         }
@@ -77,12 +73,12 @@
           "additionalProperties": false,
           "properties": {
             "patrol_types": {
+              "description": "Specify the patrol type(s) to analyze (optional). Leave empty to analyze all patrol types.",
               "items": {
                 "type": "string"
               },
               "title": "Patrol Types",
               "type": "array",
-              "description": "Specify the patrol type(s) to analyze (optional). Leave empty to analyze all patrol types.",
               "ecoscope:transform": [
                 {
                   "transformer": "EarthRangerEnumResolver",
@@ -94,18 +90,20 @@
               ]
             },
             "event_types": {
+              "description": "Specify the event type(s) to count (optional). Enter the \"Event Types\" value for each event type \u2014 one per field (e.g. \"wildlife_sighting_rep\"). Leave empty to count all patrol events.",
               "items": {
                 "type": "string"
               },
               "title": "Event Types",
               "type": "array",
-              "description": "Specify the event type(s) to count (optional). Enter the \"Event Types\" value for each event type \u2014 one per field (e.g. \"wildlife_sighting_rep\"). Leave empty to count all patrol events.",
               "default": []
             },
             "status": {
               "default": [
                 "done"
               ],
+              "description": "Choose to analyze patrols with a certain status. If left empty, patrols of all status will be analyzed",
+              "ecoscope:advanced": true,
               "items": {
                 "type": "string",
                 "oneOf": [
@@ -129,12 +127,12 @@
               },
               "title": "Patrol Status",
               "type": "array",
-              "description": "Choose to analyze patrols with a certain status. If left empty, patrols of all status will be analyzed",
-              "uniqueItems": true,
-              "ecoscope:advanced": true
+              "uniqueItems": true
             },
             "event_states": {
               "default": null,
+              "description": "Choose to analyze events with a certain state. If left empty, events of all states will be analyzed",
+              "ecoscope:advanced": true,
               "items": {
                 "type": "string",
                 "oneOf": [
@@ -158,9 +156,7 @@
               },
               "title": "Event State",
               "type": "array",
-              "description": "Choose to analyze events with a certain state. If left empty, events of all states will be analyzed",
-              "uniqueItems": true,
-              "ecoscope:advanced": true
+              "uniqueItems": true
             }
           },
           "required": [
@@ -181,20 +177,16 @@
           "additionalProperties": false,
           "properties": {
             "bounding_box": {
-              "allOf": [
-                {
-                  "$ref": "#/$defs/BoundingBox"
-                }
-              ],
+              "$ref": "#/$defs/BoundingBox",
               "default": {
                 "min_y": -90.0,
                 "max_y": 90.0,
                 "min_x": -180.0,
                 "max_x": 180.0
               },
-              "title": "Bounding Box",
               "description": "Only include patrol observations and events whose coordinates fall inside this bounding box.",
-              "ecoscope:advanced": true
+              "ecoscope:advanced": true,
+              "title": "Bounding Box"
             },
             "filter_point_coords": {
               "default": [
@@ -211,20 +203,16 @@
                   "x": 1.0
                 }
               ],
+              "description": "Exclude observations and events recorded at these exact coordinates (e.g. known bad GPS fixes).",
+              "ecoscope:advanced": true,
               "items": {
                 "$ref": "#/$defs/Coordinate"
               },
               "title": "Filter Exact Point Coordinates",
-              "type": "array",
-              "description": "Exclude observations and events recorded at these exact coordinates (e.g. known bad GPS fixes).",
-              "ecoscope:advanced": true
+              "type": "array"
             },
             "trajectory_segment_filter": {
-              "allOf": [
-                {
-                  "$ref": "#/$defs/TrajectorySegmentFilter"
-                }
-              ],
+              "$ref": "#/$defs/TrajectorySegmentFilter",
               "default": {
                 "min_length_meters": 0.001,
                 "max_length_meters": 100000,
@@ -233,9 +221,9 @@
                 "min_speed_kmhr": 0.01,
                 "max_speed_kmhr": 500
               },
-              "title": "Trajectory Filter",
               "description": "Drop trajectory segments outside these length / time / speed bounds (e.g. to remove implausible jumps).",
-              "ecoscope:advanced": true
+              "ecoscope:advanced": true,
+              "title": "Trajectory Filter"
             }
           },
           "type": "object",
@@ -254,6 +242,7 @@
           "properties": {
             "groupers": {
               "default": null,
+              "description": "",
               "items": {
                 "anyOf": [
                   {
@@ -270,7 +259,6 @@
               },
               "title": " ",
               "type": "array",
-              "description": "",
               "ecoscope:transform": [
                 {
                   "transformer": "EarthRangerEnumResolver",
@@ -302,6 +290,7 @@
                   "index_name": "patrol_type"
                 }
               ],
+              "description": "Group summary table rows by category, time period or spatial feature group \u2014 each entry adds a grouping column within the same dashboard view. Leave empty for a single overall row.",
               "items": {
                 "anyOf": [
                   {
@@ -318,7 +307,6 @@
               },
               "title": "Summarize by",
               "type": "array",
-              "description": "Group summary table rows by category, time period or spatial feature group \u2014 each entry adds a grouping column within the same dashboard view. Leave empty for a single overall row.",
               "ecoscope:transform": [
                 {
                   "transformer": "EarthRangerEnumResolver",
@@ -338,26 +326,6 @@
           "additionalProperties": false,
           "properties": {
             "aggregation": {
-              "default": null,
-              "title": "Measure Encounters By",
-              "type": "object",
-              "properties": {
-                "count_or_sum": {
-                  "type": "string",
-                  "title": "Measure Events By",
-                  "default": "Count",
-                  "oneOf": [
-                    {
-                      "const": "Count",
-                      "title": "Number of Events"
-                    },
-                    {
-                      "const": "Sum of Column",
-                      "title": "Sum of an Event Field"
-                    }
-                  ]
-                }
-              },
               "allOf": [
                 {
                   "if": {
@@ -377,7 +345,27 @@
                     }
                   }
                 }
-              ]
+              ],
+              "default": null,
+              "properties": {
+                "count_or_sum": {
+                  "type": "string",
+                  "title": "Measure Events By",
+                  "default": "Count",
+                  "oneOf": [
+                    {
+                      "const": "Count",
+                      "title": "Number of Events"
+                    },
+                    {
+                      "const": "Sum of Column",
+                      "title": "Sum of an Event Field"
+                    }
+                  ]
+                }
+              },
+              "title": "Measure Encounters By",
+              "type": "object"
             },
             "metrics": {
               "default": [
@@ -393,6 +381,7 @@
                   "unit": "km"
                 }
               ],
+              "description": "Metrics shown as columns in the encounter rate table. Add or remove rows to customize.",
               "items": {
                 "discriminator": {
                   "mapping": {
@@ -471,8 +460,7 @@
                 ]
               },
               "title": "Metrics",
-              "type": "array",
-              "description": "Metrics shown as columns in the encounter rate table. Add or remove rows to customize."
+              "type": "array"
             }
           },
           "type": "object",
@@ -723,9 +711,6 @@
         "metric": {
           "const": "active_duration",
           "default": "active_duration",
-          "enum": [
-            "active_duration"
-          ],
           "title": "Metric",
           "type": "string"
         },
@@ -894,9 +879,6 @@
         "metric": {
           "const": "custom",
           "default": "custom",
-          "enum": [
-            "custom"
-          ],
           "title": "Metric",
           "type": "string"
         }
@@ -914,9 +896,6 @@
         "metric": {
           "const": "elapsed_duration",
           "default": "elapsed_duration",
-          "enum": [
-            "elapsed_duration"
-          ],
           "title": "Metric",
           "type": "string"
         },
@@ -944,9 +923,6 @@
         "metric": {
           "const": "encounters_per_distance",
           "default": "encounters_per_distance",
-          "enum": [
-            "encounters_per_distance"
-          ],
           "title": "Metric",
           "type": "string"
         },
@@ -980,9 +956,6 @@
         "metric": {
           "const": "encounters_per_duration",
           "default": "encounters_per_duration",
-          "enum": [
-            "encounters_per_duration"
-          ],
           "title": "Metric",
           "type": "string"
         },
@@ -1017,9 +990,6 @@
         "metric": {
           "const": "encounters_per_patrol_day",
           "default": "encounters_per_patrol_day",
-          "enum": [
-            "encounters_per_patrol_day"
-          ],
           "title": "Metric",
           "type": "string"
         },
@@ -1038,9 +1008,6 @@
         "metric": {
           "const": "encounters_per_patrol",
           "default": "encounters_per_patrol",
-          "enum": [
-            "encounters_per_patrol"
-          ],
           "title": "Metric",
           "type": "string"
         },
@@ -1059,9 +1026,6 @@
         "metric": {
           "const": "leg_count",
           "default": "leg_count",
-          "enum": [
-            "leg_count"
-          ],
           "title": "Metric",
           "type": "string"
         }
@@ -1074,9 +1038,6 @@
         "metric": {
           "const": "member_days",
           "default": "member_days",
-          "enum": [
-            "member_days"
-          ],
           "title": "Metric",
           "type": "string"
         }
@@ -1090,9 +1051,6 @@
         "metric": {
           "const": "area_covered_merged",
           "default": "area_covered_merged",
-          "enum": [
-            "area_covered_merged"
-          ],
           "title": "Metric",
           "type": "string"
         },
@@ -1111,9 +1069,6 @@
         "metric": {
           "const": "patrol_count",
           "default": "patrol_count",
-          "enum": [
-            "patrol_count"
-          ],
           "title": "Metric",
           "type": "string"
         }
@@ -1126,9 +1081,6 @@
         "metric": {
           "const": "patrol_days",
           "default": "patrol_days",
-          "enum": [
-            "patrol_days"
-          ],
           "title": "Metric",
           "type": "string"
         }
@@ -1141,9 +1093,6 @@
         "metric": {
           "const": "total_distance",
           "default": "total_distance",
-          "enum": [
-            "total_distance"
-          ],
           "title": "Metric",
           "type": "string"
         },
@@ -1171,9 +1120,6 @@
         "metric": {
           "const": "total_duration",
           "default": "total_duration",
-          "enum": [
-            "total_duration"
-          ],
           "title": "Metric",
           "type": "string"
         },
@@ -1201,9 +1147,6 @@
         "metric": {
           "const": "total_encounter",
           "default": "total_encounter",
-          "enum": [
-            "total_encounter"
-          ],
           "title": "Metric",
           "type": "string"
         },
@@ -1222,9 +1165,6 @@
         "metric": {
           "const": "total_events",
           "default": "total_events",
-          "enum": [
-            "total_events"
-          ],
           "title": "Metric",
           "type": "string"
         }
@@ -1238,9 +1178,6 @@
         "metric": {
           "const": "area_covered_unmerged",
           "default": "area_covered_unmerged",
-          "enum": [
-            "area_covered_unmerged"
-          ],
           "title": "Metric",
           "type": "string"
         },
